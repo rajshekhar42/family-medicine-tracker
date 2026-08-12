@@ -109,7 +109,7 @@ Comprehensive UI test framework operating on Android Emulators via ADB and Appiu
 - **Executable Test Suites**:
   - [`test_google_login_only.py`](file:///Users/rajshekhar/code/projects/MedicineTrackerAppV2/AutomatedTest/test_google_login_only.py)
   - [`test_sync_only.py`](file:///Users/rajshekhar/code/projects/MedicineTrackerAppV2/AutomatedTest/test_sync_only.py)
-  - **Subdirectories**: `sync_test/`, `full_test/`, `local_test/`, `caretaker_add_medication/` containing end-to-end multi-device sync validation scripts.
+  - **Subdirectories**: `triggers/` (shell execution scripts), `sync_test/`, `full_test/`, `local_test/`, `caretaker_add_medication/` containing end-to-end multi-device sync validation scripts.
 
 ---
 
