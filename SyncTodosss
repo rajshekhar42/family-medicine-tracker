@@ -1,0 +1,330 @@
+CodeChange ToDo1----
+Remove 3 second timer periodic read API timer-
+
+The periodic read API request logic is located in the file 
+
+rtdb_sync_listener.dart
+ under the rtdbSyncListenerProvider.
+
+Here is the exact code block:
+
+1. The Periodic Poll Timer (Lines 156-166)
+
+
+rtdb_sync_listener.dart#L156-L166
+
+dart
+// 3. Fail-safe periodic poll every 3 seconds for robust background delivery
+  final timer = Timer.periodic(const Duration(seconds: 3), (timer) async {
+    try {
+      final snapshot = await refDb.get();
+      if (snapshot.exists && snapshot.value != null) {
+        DbHelper.log('RTDB Sync poll: Found pending payloads on periodic poll!');
+        await handleSnapshot(snapshot);
+      }
+    } catch (e) {
+      DbHelper.log('RTDB Sync poll error: $e');
+    }
+  });
+2. The Timer Disposal (Lines 168-173)
+
+
+rtdb_sync_listener.dart#L168-L173
+
+dart
+ref.onDispose(() {
+    DbHelper.log('Stopping RTDB sync listener and poll for UID: $uid');
+    subscription.cancel();
+    pullSubscription?.cancel();
+    timer.cancel(); // Cleans up the timer when the user logs out or switches profiles
+  });
+
+
+
+
+
+
+
+CodeChange ToDo2----
+You still didn't get me, I will explain again below -
+Parent always listens to its parent folder. 
+Caretaker always listen to its caretaker folder. 
+Parent always writes sync ack to caretaker folder, never reads from caretaker folder, 
+caretaker always writes sync act to parent folder. It never reads from parents folder.
+
+When parent pushes data, it writes sync Payload to caretaker folder and listen to ack in its own parent folder.
+When caretaker pushes data, it writes sync pay load to parents folder and lessons to act in its own caretaker folder
+
+
+Ah! I completely see what you mean now. Yes, you are 100% correct, and this is an incredibly elegant solution.
+
+By treating each user's /sync_payloads/$uid folder as a bidirectional inbox for all messages (both payloads and acknowledgments), you completely solve the security rule problem and the offline/timeout sync issue at the same time.
+
+Here is why this design works perfectly:
+
+1. It satisfies the Security Rules
+Reads: Parent only reads /sync_payloads/$parentUid. Caretaker only reads /sync_payloads/$caretakerUid. (No read permission boundaries are broken).
+Writes: Parent writes the payload to the caretaker's inbox (/sync_payloads/$caretakerUid) and the caretaker writes the ack to the parent's inbox (/sync_payloads/$parentUid). Since they are connected, this is fully authorized.
+2. It solves the Offline / Timeout Bug
+In your proposed flow, the parent no longer needs to wait synchronously for 15 seconds during a push.
+
+Parent Pushes: Parent writes the payload to /sync_payloads/$caretakerUid/$syncId and immediately finishes.
+Caretaker is Offline: The payload sits safely in the caretaker's inbox in the cloud.
+Caretaker processes it: An hour later, the caretaker opens the app, receives the payload via their persistent listener, processes it, and writes the sync_ack to the parent's inbox: /sync_payloads/$parentUid/$syncId_ack (with event_type: 'sync_ack').
+Parent receives it:
+If the parent's app is open, their persistent listener catches the sync_ack immediately and clears the SQLite dirty flags.
+If the parent's app is closed, the sync_ack sits safely in the parent's inbox. The next time the parent opens the app, their WebSocket connects, reads the pending sync_ack message, clears the local dirty flags, and deletes the ack node.
+3. It simplifies the Code
+You can:
+
+Remove the /sync_acks root path from the database rules entirely.
+Remove the short-lived 15-second listeners from the code.
+Let the single persistent listener on /sync_payloads/$myUid handle everything:
+If the incoming node has event_type: 'sync_update', it processes it as a database update.
+If the incoming node has event_type: 'sync_ack', it processes it as an acknowledgment and clears the dirty flags.
+This is a much cleaner, more robust messaging architecture. Thank you for clarifying—this is definitely the way to go!'
+
+
+
+
+CodeChange ToDo3----
+activeProfile.lastSync is not displayed in UI in profile section, 
+Yes, under the current implementation, activeProfile.lastSync is updated only after a successful sync_ack is received.
+
+Here is exactly when it occurs in both flows:
+
+1. In the Push Flow (sync())
+The Code: 
+
+sync_provider.dart:L91-L110
+The Sequence:
+The app calls repository.syncAll(activeProfile.id).
+syncAll uploads the payload, listens to /sync_acks/$syncId, and awaits a success ack from the caretaker.
+Once the ack is received, syncAll completes successfully.
+The app then updates last_sync in SQLite and updates the activeProfileProvider state.
+If it fails/times out: syncAll throws an exception, the update code is bypassed, and lastSync is not updated.
+2. In the Pull Flow (requestPull())
+The Code: 
+
+sync_provider.dart:L221-L249
+The Sequence:
+The app triggers the pull request to the parent.
+It opens a listener on /sync_acks/$syncId and awaits a success ack from the parent.
+Once the parent acknowledges (completer.future resolves), it processes the incoming changes.
+The app then updates last_sync in SQLite and updates the activeProfileProvider state.
+If it fails/times out: The future throws an exception, the update code is bypassed, and lastSync is not updated.
+Summary
+Yes, activeProfile.lastSync represents a verified, successful end-to-end sync operation (confirmed by a sync_ack).
+
+Note: In the new bidirectional inbox model we discussed, the caretaker's sync_ack event will be received asynchronously by the parent's persistent listener, which will then trigger the SQLite update to set lastSync and clear the local dirty flags.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+CodeChange ToDo4----
+Clear is_dirty on Successful Write to Cloud Queue
+
+Yes, you are absolutely correct. That is the exact cause of the duplicate uploads.
+
+Because the parent's local database does not clear the is_dirty flags until it receives the caretaker's acknowledgment, the parent's device is left in a state where it thinks those changes are unsaved in the cloud.
+
+The Problem Step-by-Step:
+Parent Pushes Delta: Parent writes a payload containing the changes to /sync_payloads/CaretakerUID/$syncId1. The Firebase RTDB server receives and stores it.
+Caretaker is Offline: The caretaker does not send an ack. The parent app times out and exits. The parent's is_dirty flags remain 1.
+Parent App Restarts: The user opens the parent app again. The app queries SQLite, sees is_dirty = 1, and thinks: "I need to sync these changes."
+Duplicate Upload: It generates a new ID ($syncId2) and uploads the exact same data to /sync_payloads/CaretakerUID/$syncId2.
+RTDB Bloat: Now, the caretaker's inbox has two duplicate copies of the same changes sitting in the cloud.
+The Solution: Clear is_dirty on Successful Write to Cloud Queue
+Since Firebase Realtime Database is a persistent cloud database, once ref.set() finishes successfully, the data is safely stored in the cloud. It is guaranteed to be delivered to the caretaker the moment they connect.
+
+Therefore:
+
+The parent should treat the successful ref.set() write to the cloud as a successful upload.
+The parent should clear its local is_dirty flags immediately after the ref.set() completes, rather than waiting for the caretaker to process it.
+On subsequent launches, the parent app will find is_dirty = 0 and will skip the redundant sync upload, preventing any duplicates.'
+
+
+
+
+
+
+
+CodeChange ToDo6----
+Caretaker push for add medication, issue is dirty flag is not getting cleared on the parent side.
+The flow should be on add medication for parent on the caretaker side
+-caretaker, upload the newly added medication data to sync pay load
+-caretaker also send a FCM push to the parent along with the newly added medication data
+Parent will consume either or both of them, and will just data that is newly added medication to its table.
+And also, invokes are push sync to the caretaker, and rest of the flow continues, so as parent writes sync payload to real time database, it will clear the dirty flag
+
+
+
+
+
+
+CodeChange ToDo7----
+When caretaker initiate a pull sync to the parent.
+1-caretaker, upload the newly added medication data to sync pay load
+2-caretaker also send a FCM push to the parent along with the newly added medication data
+On the parent side, First it gives a sync ack for 1(Which caretaker will consume and done from caretaker side) 
+and after this now both the above will result in invocation of a push sync to the caretaker, and rest of the flow continues, so parent writes sync payload(if is any dirty data is there) to real time database and it will clear the dirty flag.
+
+
+
+
+
+
+CodeChange ToDo5
+Sync to be paused, if caretaker is not coming online for 1 day, i.e. if the last succesfull sync was before 1 days ago and in the last 1 day, if caretaker has not came online, we will pause the sync from parent side.
+I guess to achive this we need to maintain the last sync_payload upload time as well in the activeprofile table.
+SQLite Schema Update (db_helper.dart): Add a last_upload_time column (INTEGER NULLABLE) to the profiles table creation SQL statement:
+
+sql
+CREATE TABLE profiles (
+  id TEXT PRIMARY KEY,
+  profile_name TEXT,
+  time_zone TEXT,
+  app_code TEXT,
+  is_owner INTEGER,
+  last_sync INTEGER,
+  last_upload_time INTEGER, -- New Column
+  created_at INTEGER,
+  updated_at INTEGER
+)
+Profile Model Update (profile_model.dart & profile.dart):
+
+Add final int? lastUploadTime to the Profile entity and ProfileModel class.
+Update fromMap / toMap and fromJson / toJson mapping logic to support serialization of the last_upload_time column.
+Phase 2: Updating the Timestamps in the Sync Flows
+When Parent Uploads Payload (sync_repository_impl.dart or sync_provider.dart): Immediately after the RTDB ref.set(...) upload succeeds, update the local SQLite database to record the upload time:
+
+dart
+final now = DateTime.now().millisecondsSinceEpoch;
+// 1. Update SQLite
+await db.update(
+  AppConstants.tableProfiles,
+  {'last_upload_time': now},
+  where: 'id = ?',
+  whereArgs: [activeProfile.id],
+);
+// 2. Update active profile Riverpod provider
+final updatedProfile = activeProfile.copyWith(lastUploadTime: now);
+ref.read(activeProfileProvider.notifier).setActiveProfile(updatedProfile);
+When Caretaker Ack is Received (rtdb_sync_listener.dart): When the parent’s persistent WebSocket listener receives the successful sync_ack event, it updates last_sync (which marks the queue as empty):
+
+dart
+// On receiving sync_ack success
+final now = DateTime.now().millisecondsSinceEpoch;
+await db.update(
+  AppConstants.tableProfiles,
+  {'last_sync': now}, // last_sync now matches/exceeds last_upload_time
+  where: 'id = ?',
+  whereArgs: [activeProfile.id],
+);
+Phase 3: Pause Decision Logic
+Add the offline/local check before performing any push sync in syncAll (or sync_provider.dart):
+
+dart
+final now = DateTime.now().millisecondsSinceEpoch;
+final oneDayMs = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+final lastSyncTime = activeProfile.lastSync ?? 0;
+final lastUploadTime = activeProfile.lastUploadTime ?? 0;
+// 1. Is there an un-acknowledged payload currently in the cloud queue?
+final isPayloadPending = lastUploadTime > lastSyncTime;
+// 2. Has that pending payload been sitting there for more than 1 day?
+final isPendingForOverOneDay = isPayloadPending && (now - lastUploadTime) > oneDayMs;
+if (isPendingForOverOneDay) {
+  DbHelper.log('Sync paused for caretaker: A pending payload has been un-acked for > 24 hours.');
+  return; // Stop sync execution here
+}
+
+
+
+
+CodeChange ToDo8
+Do a sync push after 10mins of last update done by parent.
+
+
+
+
+
+
+CodeChange ToDo9(Future roadmap)
+Impliment webRTC for sending these updates to each other devices.
+Attempt to establish a p2p webRTC connection, if connection is succesfull use the same to send data and get ack immideately.
+if not fallback to current approach/logic of using Firebase RTDB and FCM push.
+
+
+
+
+
+
+parent clicks on sync now
+Checks if there are any dirty rows, 
+  if no dirty rows, abort the syncNow as nothing to sync. 
+  Update the lastSync time to current time.???????
+If Dirty rows present
+  Check if any sync acks are present or pull request is present in the sync payload inbox
+    if sync acks present
+        then process them.
+        Process Sync Ack
+    If pull request is present 
+        then process it
+        Process Pull requests
+        return from the flow;
+
+  If sync acks were present and proccessed, check again if dirt rows are still present.
+    If present process core sync.
+  If No dirty rows, abort the syncNow as nothing to sync. 
+    Update the lastSync time to current time.???????
+
+  If sync acks were not present, that means dirty rows are still there
+    process core sync.
+
+
+
+
+
+
+Process Sync Ack
+  Clear dirty rows based on the sync id recived in the sync ack, by comparing the corresponding rows update time stamp with sync_id timestamp. If the updated time stamp is less than sync_id timestamp, then clear the dirty flag.
+  Remove the sync ack from the sync payload inbox
+  Update the lastSync time to current time
+
+Process Pull requests
+  if caretakerLastSyncTime is 0 then pull all data and sent to sync payload inbox
+  else if caretakerLastSyncTime > 0 then
+    Checks if there are any dirty rows,
+      Create a compressed sync payload and upload it to sync payload inbox(if a sync payload already present replace it))
+    If no dirty rows
+      Send {} as sync payload to sync payload inbox(but only if no existing payload is present there)
+  Remove Pull request from sync payload inbox.
+
+
+
+Invoke push sync to the caretaker.
+
+    
+remove the chuncking of sync payload
+
+when login happens, remove the existing connections if any and remove the sync payload from the rtdb if any, user have to pair again.
+
+when ever pair happens, mark all the rows dirty again. 
+
+
+
+
+
+
+Parent log-out and log-in again, parent data in caretaker is lost, and no more further sync is happening-sync payload in rtdb is never consumed, even after manula sync from careter profile menu.

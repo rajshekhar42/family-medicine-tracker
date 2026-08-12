@@ -1,0 +1,186 @@
+Profile Name creation
+Update Profile Name
+Create Medicine
+Edit Medicine
+List Medicines
+List Medicines for the day
+Mark as Taken
+Mark as Skip
+Adherence History by date
+Adherence History by Medicine
+Settings - Dose Reminders, notification sound, Missed dose grace period
+Mark Medicine as Auto skip based on grace period.
+
+
+
+
+
+
+
+Google sign-in
+-Save Profile Name in Firebase
+App Code generation 
+-Idempotent for a specific EmailId used.
+-Save App code in Firebase.
+Fetch profile info from Firebase DB and If Profile has a parent connection, display the same. Also perform a pull sync to get all the details from parent app.
+
+Parent profile addition by caretaker.
+-Saving this addition request in Firebase Realtime DB - pending for approval.
+-Show Parent profile info (AppCode, Name, Email) in Caretaker App
+-Care Taker sees this pairing status as "pending for approval"-in his Profile
+-On App opening if this pairing status is still "pending for approval"-Then pull the latest  "pairing addition status" from Firebase.
+
+Approving caretaker profile addition request by parent.
+-Save in loacl DB that there is a pairing request from caretaker for approval
+-Show the pairing request banner in Home Screen of Parent App.
+-On App opening if this pairing status is still "pending for approval"-Then continue to show the banner.
+On Approval-
+-Update the addition request status in firebase Realtime DB.
+-Send FCM push to caretaker app that "parent has approved the caretaker request"
+-Show CareTaker profile info (AppCode, Name, Email) in Parent App
+-Allow edit of parent name in care taker profile menu.
+
+
+
+
+
+Sync flows-
+Manual sync by parent - Push
+Manual sync by caretaker - Pull
+
+On App launch or resume.
+    Based on if last sync is before AppConstants.syncDebounceMinutes then trigger sync.
+Event driven
+    Caretaker adding/editing medicine for Parent
+
+ Background & Foreground Network Triggers
+    Foreground RTDB Listeners
+    Background FCM Notifications
+
+
+
+
+ToDo:
+
+
+
+
+
+
+Icons correction for all tablets/capsules etc
+
+
+
+
+
+
+
+
+
+
+
+
+
+Last sync time - should be true last sync time
+
+
+
+Whenever I open the caretaker app, the last sync time always shows the current time
+
+List again, all the ways of sync happening from the perspective of parent and caretaker
+
+
+Firebase Scheduled Cloud Function (Cron) - to clean up sync_acks older than 7 days.
+
+
+
+When adding parent profile - add options for photo, relation.
+
+Delete parent profile option to be given to care taker.
+
+
+---------------------------------------------------
+Test Automations-
+
+
+After entring profile name, check that name is correctly getting displayed in profile section.
+
+After Editing profile name, check that name is correctly getting displayed in profile section is correct.
+
+After Medicine creation - check that medicine is getting display in medicine list, Edit it and check that all the info mentioned in edit screen is matching with what was entered(or default values selected) in Add medicine screen.
+
+Edit medicine checks-
+Edit Name.
+Edit quantity
+Edit dose info
+Edit Schedule(Daily schedule time, start date, end date)
+Check that above edits are correctly reflecting.
+
+Test the taken time for 
+-Mark as Taken
+-Mark as Skip
+These are getting reflected in home screen correctly.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Done
+-----------------------------------------------------------
+Profile menu tap should open and close the drawer - (currently it only opens)
+
+When caretaker added parent profile - in care taker app it should show that pairing status as pending for approval.
+
+When pairing request came to Parent and it parent simplly closes the app (without accepting or rejecting), next time when he open the app, pairing request banner is no more visible.
+
+If I log out and login back, AppCode remains same, but if I login and then clear the app data and cache, and then login again a new AppCode is regenerated.As App code is specific to emailid and it is stored in firebase realtime DB, it should not generate a new app code when I clear the app data and cache
+
+
+Once the caretaker added the parent profile and it is approved by the parent, Now if I logout and login back or if the App data is cleared and login back, the pairing should persist, but it is not working if the App data is cleared and login back, I am not able to see the parent profile. 
+
+
+On Home screen - in the week view carousel - when you click on any date that date moves to middle, instead that date should stay where it is and simply should get selected and highlighted.
+User should be able to scroll week view by swiping left and right. when they scroll to left it should show previous weeks and when they scroll to right it should show next weeks and it should highlight middle date of the week untill unless current date is there in the week carousel then it should highlight current date.
+
+
+
+
+User should readily understand that all the screens like Home screen, medicine list and add medicine are for Parent or for self.
+
+Clear demarcation between caretaker and parent profiles in profile menu.
+
+
+Edit log - user can double tap to edit medicine log. //Test
+
+
+Add Skip text in home screen
+
+
+
+Convert Add Medication to a wizard,
+1st page->
+Medication Name
+Type
+
+2nd page->
+Frequency 
+Dose Schedule times
+
+3rd page->
+Start date
+Continuous (No End Date)
+Optional End date
+
+

@@ -1,0 +1,34 @@
+{
+  "rules": {
+    "profiles": {
+      ".read": "auth != null",
+      "$appCode": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        "connections": {
+          "$caretakerAppCode": {
+            ".write": "auth != null"
+          }
+        }
+      }
+    },
+    "users": {
+      ".read": "auth != null",
+      "$userId": {
+        ".read": "auth != null && auth.uid == $userId",
+        ".write": "auth != null && auth.uid == $userId",
+        "connected_parents": {
+          "$parentAppCode": {
+            ".write": "auth != null"
+          }
+        }
+      }
+    },
+    "sync_payloads": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    }
+  }
+}

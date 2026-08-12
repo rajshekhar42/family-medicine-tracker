@@ -1,0 +1,69 @@
+# Miscellaneous / System
+*.class
+*.log
+*.tmp
+.DS_Store
+.AppleDouble
+.LSOverride
+Thumbs.db
+tmp/
+
+# Logcat & XML Dumps from Automated Tests
+*_logcat_raw.txt
+window_dump_*.xml
+test_dump.xml
+
+# Python / Automated Test Artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Flutter / Dart / Pub
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+**/doc/api/
+**/ios/Flutter/.last_build_id
+
+# Android
+.gradle/
+android/.gradle/
+android/app/debug/
+android/app/profile/
+android/app/release/
+android/local.properties
+android/key.properties
+android/app/key.properties
+*.apk
+*.aab
+
+# iOS / CocoaPods
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/DerivedData/
+*.xcworkspace
+
+# Firebase
+.firebase/
+
+# IDE & Editor Files
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.history
+.atom/
+.build/
+.buildlog/
+.svn/
+.swiftpm/
+migrate_working_dir/
