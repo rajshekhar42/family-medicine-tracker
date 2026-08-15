@@ -4,6 +4,7 @@ import 'package:family_medicine_tracker/core/utils/db_helper.dart';
 import 'package:family_medicine_tracker/core/constants/app_constants.dart';
 import 'package:family_medicine_tracker/features/sync/data/repositories/sync_repository_impl.dart';
 import 'package:family_medicine_tracker/features/sync/data/datasources/sync_remote_datasource.dart';
+import 'package:family_medicine_tracker/features/sync/data/datasources/sync_local_datasource.dart';
 
 void main() {
   sqfliteFfiInit();
@@ -16,7 +17,10 @@ void main() {
     final db = await DbHelper.instance.database;
     await db.delete(AppConstants.tableProfiles);
     mockRemote = SyncRemoteDataSourceInMemory();
-    repo = SyncRepositoryImpl(remoteDataSource: mockRemote);
+    repo = SyncRepositoryImpl(
+      remoteDataSource: mockRemote,
+      localDataSource: SyncLocalDataSourceImpl(),
+    );
   });
 
   test('hasUnconsumedPayload returns false when slot is empty', () async {
@@ -31,7 +35,6 @@ void main() {
     await mockRemote.uploadSyncPayload(
       recipientUid: 'caretaker_1',
       senderUid: 'senderUid',
-      caretakerFcmToken: 'fcm_token_123',
       senderAppCode: 'PARENT123',
       syncId: 'sync_id_abc',
       payloadJson: '{"medicines":[]}',
@@ -48,7 +51,6 @@ void main() {
     await mockRemote.uploadSyncPayload(
       recipientUid: 'caretaker_1',
       senderUid: 'profile_1',
-      caretakerFcmToken: 'fcm_token_123',
       senderAppCode: 'PARENT123',
       syncId: 'sync_id_abc',
       payloadJson: '{"medicines":[]}',

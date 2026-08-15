@@ -3,7 +3,7 @@ import '../../../../core/errors/failures.dart';
 import '../../../medications/domain/entities/medicine.dart';
 import '../../../medications/domain/entities/schedule.dart';
 import '../../../medications/domain/repositories/medication_repository.dart';
-import '../../../sync/data/repositories/sync_repository_impl.dart';
+import '../../../sync/domain/repositories/sync_repository.dart';
 
 class CaretakerAddMedication {
   final MedicationRepository medicationRepository;

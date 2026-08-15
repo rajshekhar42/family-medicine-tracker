@@ -3,6 +3,7 @@ import 'package:uuid/uuid.dart';
 import 'package:flutter/foundation.dart';
 import '../../../../core/utils/db_helper.dart';
 import '../../data/datasources/onboarding_local_datasource.dart';
+import '../../data/datasources/onboarding_remote_datasource.dart';
 import '../../data/repositories/onboarding_repository_impl.dart';
 import '../../domain/entities/profile.dart';
 import '../../domain/repositories/onboarding_repository.dart';
@@ -25,9 +26,17 @@ final onboardingLocalDataSourceProvider = Provider<OnboardingLocalDataSource>((r
   return OnboardingLocalDataSourceImpl(DbHelper.instance);
 });
 
+final onboardingRemoteDataSourceProvider = Provider<OnboardingRemoteDataSource>((ref) {
+  if (kIsWeb) {
+    return OnboardingRemoteDataSourceInMemory();
+  }
+  return OnboardingRemoteDataSourceImpl();
+});
+
 final onboardingRepositoryProvider = Provider<OnboardingRepository>((ref) {
   return OnboardingRepositoryImpl(
     localDataSource: ref.watch(onboardingLocalDataSourceProvider),
+    remoteDataSource: ref.watch(onboardingRemoteDataSourceProvider),
     uuid: const Uuid(),
   );
 });

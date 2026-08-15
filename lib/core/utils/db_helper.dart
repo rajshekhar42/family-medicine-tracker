@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import '../constants/app_constants.dart';
+import 'db_migrations.dart';
 
 class DbHelper {
   static final DbHelper instance = DbHelper._init();
@@ -35,25 +36,7 @@ class DbHelper {
   }
 
   Future<void> _onUpgrade(Database db, int oldVersion, int newVersion) async {
-    if (oldVersion < 2) {
-      try {
-        await db.execute('ALTER TABLE ${AppConstants.tableProfiles} ADD COLUMN app_code TEXT');
-      } catch (e) {
-        // Safe check if column already exists
-      }
-      try {
-        await _createSyncTables(db);
-      } catch (e) {
-        // Safe check
-      }
-    }
-    if (oldVersion < 3) {
-      try {
-        await db.execute("ALTER TABLE ${AppConstants.tableProfiles} ADD COLUMN profile_type TEXT DEFAULT 'Parent'");
-      } catch (e) {
-        // Safe check
-      }
-    }
+    await DbMigrationRunner.run(db, oldVersion, newVersion);
   }
 
   Future<void> _createDB(Database db, int version) async {

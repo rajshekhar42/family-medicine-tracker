@@ -7,6 +7,7 @@ import 'package:sqflite/sqflite.dart';
 import '../../../../core/utils/db_helper.dart';
 import '../../../../core/constants/app_constants.dart';
 import 'compression_helper.dart';
+import 'sync_ack_handler.dart';
 
 class SyncIngestor {
   SyncIngestor._();
@@ -231,7 +232,9 @@ class SyncIngestor {
           }
         });
 
-        // Ingestion success: Update status
+        await _sendSyncAck(db, syncId, senderUid ?? '', 'success');
+
+        // Ingestion success: Update status to 'done'
         await db.update(
           AppConstants.tableSyncQueue,
           {
@@ -241,10 +244,6 @@ class SyncIngestor {
           where: 'sync_id = ?',
           whereArgs: [syncId],
         );
-
-        // Send confirmation ack to sender's inbox
-        await _sendSyncAck(syncId, senderUid ?? '', 'success');
-
       } catch (e) {
         debugPrint('Sync ingestion failed for syncId=$syncId: $e');
         await db.update(
@@ -257,12 +256,20 @@ class SyncIngestor {
           whereArgs: [syncId],
         );
 
-        await _sendSyncAck(syncId, senderUid ?? '', 'failed', reason: e.toString());
+        await _sendSyncAck(db, syncId, senderUid ?? '', 'failed', reason: e.toString());
       }
     }
   }
 
-  static Future<void> _sendSyncAck(String syncId, String senderUid, String status, {String? reason}) async {
+  /// Sends a sync_ack to [senderUid]'s RTDB inbox via [SyncAckHandler] pattern.
+  /// Reads myAppCode from [db] to populate sender_app_id on the ack node.
+  static Future<void> _sendSyncAck(
+    Database db,
+    String syncId,
+    String senderUid,
+    String status, {
+    String? reason,
+  }) async {
     if (Firebase.apps.isEmpty || FirebaseAuth.instance.currentUser == null) {
       debugPrint('Firebase not initialized or user not authenticated, skipping remote sync ack for syncId=$syncId');
       return;
@@ -272,7 +279,6 @@ class SyncIngestor {
       return;
     }
     try {
-      final db = await DbHelper.instance.database;
       final ownerResults = await db.query(
         AppConstants.tableProfiles,
         where: 'is_owner = ?',
@@ -280,9 +286,8 @@ class SyncIngestor {
         limit: 1,
       );
       final myAppCode = ownerResults.isNotEmpty ? ownerResults.first['app_code'] as String? ?? '' : '';
-
       final myUid = FirebaseAuth.instance.currentUser?.uid ?? '';
-      // Write ack to sender's inbox (bidirectional inbox model)
+
       await FirebaseDatabase.instance.ref('sync_payloads/$senderUid/${syncId}_ack').set({
         'event_type': 'sync_ack',
         'status': status,

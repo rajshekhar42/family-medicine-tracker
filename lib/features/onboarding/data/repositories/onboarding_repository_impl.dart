@@ -4,17 +4,19 @@ import '../../../../core/errors/failures.dart';
 import '../../domain/entities/profile.dart';
 import '../../domain/repositories/onboarding_repository.dart';
 import '../datasources/onboarding_local_datasource.dart';
+import '../datasources/onboarding_remote_datasource.dart';
 import '../models/profile_model.dart';
 import '../../../../core/utils/app_code_generator.dart';
-import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class OnboardingRepositoryImpl implements OnboardingRepository {
   final OnboardingLocalDataSource localDataSource;
+  final OnboardingRemoteDataSource remoteDataSource;
   final Uuid uuid;
 
   OnboardingRepositoryImpl({
     required this.localDataSource,
+    required this.remoteDataSource,
     required this.uuid,
   });
 
@@ -168,20 +170,27 @@ class OnboardingRepositoryImpl implements OnboardingRepository {
 
       await localDataSource.saveProfile(updatedModel);
 
+      // Propagate name change to RTDB if authenticated
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         final ownerModel = allModels.firstWhere((m) => m.isOwner, orElse: () => targetModel);
         final ownerAppCode = ownerModel.appCode;
 
         if (ownerAppCode != null && ownerAppCode.isNotEmpty && ownerAppCode != 'None') {
-          final dbRef = FirebaseDatabase.instance.ref();
           if (targetModel.isOwner) {
-            await dbRef.child('profiles/$ownerAppCode/profile_name').set(newName);
+            await remoteDataSource.updateOwnerProfileName(
+              ownerAppCode: ownerAppCode,
+              newName: newName,
+            );
           } else {
             final parentAppCode = targetModel.appCode;
             if (parentAppCode != null && parentAppCode.isNotEmpty && parentAppCode != 'None') {
-              await dbRef.child('profiles/$ownerAppCode/connections/$parentAppCode/display_name').set(newName);
-              await dbRef.child('users/${user.uid}/connected_parents/$parentAppCode/display_name').set(newName);
+              await remoteDataSource.updateConnectedParentName(
+                ownerAppCode: ownerAppCode,
+                parentAppCode: parentAppCode,
+                newName: newName,
+                caretakerUid: user.uid,
+              );
             }
           }
         }
@@ -218,11 +227,13 @@ class OnboardingRepositoryImpl implements OnboardingRepository {
         final ownerModel = allModels.firstWhere((m) => m.isOwner, orElse: () => targetModel);
         final ownerAppCode = ownerModel.appCode;
 
-        final dbRef = FirebaseDatabase.instance.ref();
         if (ownerAppCode != null && ownerAppCode.isNotEmpty) {
-          await dbRef.child('profiles/$parentAppCode/connections/$ownerAppCode').remove();
+          await remoteDataSource.deleteParentConnection(
+            ownerAppCode: ownerAppCode,
+            parentAppCode: parentAppCode,
+            caretakerUid: user.uid,
+          );
         }
-        await dbRef.child('users/${user.uid}/connected_parents/$parentAppCode').remove();
       }
 
       return const Right(null);

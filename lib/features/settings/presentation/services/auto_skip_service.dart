@@ -3,8 +3,6 @@ import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../../home/data/datasources/home_local_datasource.dart';
 import '../../data/datasources/settings_local_datasource.dart';
-import '../../data/models/settings_model.dart';
-import '../../../../core/utils/db_helper.dart';
 
 class AutoSkipService {
   final HomeLocalDataSource homeLocalDataSource;

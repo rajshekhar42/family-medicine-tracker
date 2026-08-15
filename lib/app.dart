@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
-import 'main.dart';
+import 'core/bootstrap/app_bootstrapper.dart';
 import 'core/theme/app_theme.dart';
 import 'core/constants/app_constants.dart';
 
@@ -112,15 +112,8 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     // Run startup sync check after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       _triggerStartupSync();
-      // Stop app startup trace
-      try {
-        if (appStartupTrace != null) {
-          await appStartupTrace!.stop();
-          appStartupTrace = null;
-        }
-      } catch (e) {
-        debugPrint('Failed to stop app startup trace: $e');
-      }
+      // Stop app startup trace via the bootstrapper
+      await AppBootstrapper.stopStartupTrace();
     });
   }
 

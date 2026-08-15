@@ -1,9 +1,10 @@
-import 'package:uuid/uuid.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
 import '../../../../core/utils/db_helper.dart';
 import '../../data/datasources/sync_remote_datasource.dart';
+import '../../data/datasources/sync_local_datasource.dart';
 import '../../data/repositories/sync_repository_impl.dart';
+import '../../domain/repositories/sync_repository.dart';
 import 'auth_provider.dart';
 import '../../../profiles/presentation/providers/active_profile_provider.dart';
 import '../../../home/presentation/providers/home_provider.dart';
@@ -49,9 +50,14 @@ final syncRemoteDataSourceProvider = Provider<SyncRemoteDataSource>((ref) {
   return SyncRemoteDataSourceImpl();
 });
 
+final syncLocalDataSourceProvider = Provider<SyncLocalDataSource>((ref) {
+  return SyncLocalDataSourceImpl();
+});
+
 final syncRepositoryProvider = Provider<SyncRepository>((ref) {
   return SyncRepositoryImpl(
     remoteDataSource: ref.watch(syncRemoteDataSourceProvider),
+    localDataSource: ref.watch(syncLocalDataSourceProvider),
   );
 });
 

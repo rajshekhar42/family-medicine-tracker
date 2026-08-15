@@ -15,7 +15,7 @@ EMULATOR_ID="${1:-emulator-5554}"
 PHYSICAL_ID="${2:-emulator-5556}"
 APP_PACKAGE="org.medimitra.family_medicine_tracker"
 APP_ACTIVITY="$APP_PACKAGE.MainActivity"
-DEBUG_APK="build/app/outputs/flutter-apk/app-debug.apk"
+DEBUG_APK="../../build/app/outputs/flutter-apk/app-debug.apk"
 
 # ---------- Build Debug APK ----------
 echo ""
@@ -102,7 +102,7 @@ sleep 8
 # ---------- Run sync test ----------
 echo ""
 echo "🤖 Running sync-only test suite..."
-cd AutomatedTest/sync_test
+cd ../../AutomatedTest/sync_test
 python3 -u test_sync_only.py --emulator "$EMULATOR_ID" --physical "$PHYSICAL_ID"
 cd ../..
 

@@ -1,60 +1,29 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
-import 'package:sqflite/sqflite.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../../../core/utils/db_helper.dart';
-import '../../../../core/constants/app_constants.dart';
 import '../datasources/sync_remote_datasource.dart';
+import '../datasources/sync_local_datasource.dart';
 import '../../presentation/providers/rtdb_sync_listener.dart';
+import '../../domain/repositories/sync_repository.dart';
 
-abstract class SyncRepository {
-  Future<void> syncAll(String activeProfileId, {int? caretakerLastSyncTime});
-  Future<void> requestPullSync(
-    String caretakerUid,
-    String syncId,
-    int caretakerLastSyncTime,
-  );
-  Future<bool> hasDirtyRows(String? activeProfileId);
-  Future<void> markAllRowsDirty(String profileId);
-}
+// SyncRepository interface lives in domain/repositories/sync_repository.dart
+// Imported above — do not re-declare here.
 
 class SyncRepositoryImpl implements SyncRepository {
   final SyncRemoteDataSource remoteDataSource;
+  final SyncLocalDataSource localDataSource;
 
-  SyncRepositoryImpl({required this.remoteDataSource});
+  SyncRepositoryImpl({
+    required this.remoteDataSource,
+    required this.localDataSource,
+  });
 
   @override
   Future<void> markAllRowsDirty(String profileId) async {
-    final db = await DbHelper.instance.database;
-    await db.transaction((txn) async {
-      await txn.update(
-        AppConstants.tableProfiles,
-        {'is_dirty': 1},
-        where: 'id = ?',
-        whereArgs: [profileId],
-      );
-      await txn.update(
-        AppConstants.tableMedicines,
-        {'is_dirty': 1},
-        where: 'profile_id = ?',
-        whereArgs: [profileId],
-      );
-      await txn.update(
-        AppConstants.tableSchedules,
-        {'is_dirty': 1},
-        where: 'profile_id = ?',
-        whereArgs: [profileId],
-      );
-      await txn.update(
-        AppConstants.tableMedicineLog,
-        {'is_dirty': 1},
-        where: 'profile_id = ?',
-        whereArgs: [profileId],
-      );
-    });
+    await localDataSource.markAllRowsDirty(profileId);
     DbHelper.log('SyncRepo: Marked all profile rows dirty for $profileId');
   }
 
@@ -63,62 +32,61 @@ class SyncRepositoryImpl implements SyncRepository {
     String activeProfileId, {
     int? caretakerLastSyncTime,
   }) async {
-    final db = await DbHelper.instance.database;
-
     // 1. Fetch active profile to check if it's caretaker or owner
-    final activeProfileResults = await db.query(
-      AppConstants.tableProfiles,
-      where: 'id = ?',
-      whereArgs: [activeProfileId],
-      limit: 1,
-    );
-    if (activeProfileResults.isEmpty) return;
-    final activeProfile = activeProfileResults.first;
+    final activeProfile = await localDataSource.getProfileById(activeProfileId);
+    if (activeProfile == null) return;
     final isOwner = activeProfile['is_owner'] as int == 1;
 
     // 2. Fetch owner profile details (needs app code)
-    final ownerResults = await db.query(
-      AppConstants.tableProfiles,
-      where: 'is_owner = ?',
-      whereArgs: [1],
-      limit: 1,
-    );
-    if (ownerResults.isEmpty) return;
-    final ownerMap = ownerResults.first;
+    final ownerMap = await localDataSource.getOwnerProfile();
+    if (ownerMap == null) return;
     final ownerFirebaseUid = ownerMap['id'] as String;
     final ownerAppCode = ownerMap['app_code'] as String?;
     if (ownerAppCode == null) return;
 
-    final String currentAuthUid = FirebaseAuth.instance.currentUser?.uid ?? '';
+    final String currentAuthUid =
+        FirebaseAuth.instance.currentUser?.uid ?? '';
     final List<String> inboxUidsToCheck = {
       if (currentAuthUid.isNotEmpty) currentAuthUid,
       ownerFirebaseUid,
     }.toList();
 
     if (isOwner && caretakerLastSyncTime == null) {
-      // Pre-Sync Priority Check: Check if pending sync_acks or pull requests exist in Parent's inbox
+      // Pre-Sync Priority Check: Check if pending sync_acks or pull requests
+      // exist in Parent's inbox
       for (final targetUid in inboxUidsToCheck) {
         try {
-          final inboxRef = FirebaseDatabase.instance.ref('sync_payloads/$targetUid');
+          final inboxRef =
+              FirebaseDatabase.instance.ref('sync_payloads/$targetUid');
           final inboxSnap = await inboxRef.get();
           if (inboxSnap.exists && inboxSnap.value is Map) {
             final rawMap = inboxSnap.value as Map;
             for (final entry in rawMap.entries) {
               final nodeKey = entry.key.toString();
-              final data = Map<String, dynamic>.from(entry.value as Map);
+              final data =
+                  Map<String, dynamic>.from(entry.value as Map);
               final eventType = data['event_type'] as String?;
 
               if (eventType == 'sync_ack' || nodeKey.endsWith('_ack')) {
+                final db = await DbHelper.instance.database;
                 final processed = await processSyncAck(db, data);
                 if (processed) {
-                  DbHelper.log('SyncRepo: Pre-sync pipeline - processed and removed sync_ack $nodeKey from $targetUid inbox');
+                  DbHelper.log(
+                    'SyncRepo: Pre-sync pipeline - processed and removed sync_ack $nodeKey from $targetUid inbox',
+                  );
                   await inboxRef.child(nodeKey).remove();
                 } else {
-                  DbHelper.log('SyncRepo: Pre-sync pipeline - sync_ack $nodeKey not recognized in queue; keeping node');
+                  DbHelper.log(
+                    'SyncRepo: Pre-sync pipeline - sync_ack $nodeKey not recognized in queue; keeping node',
+                  );
                 }
-              } else if (eventType == 'request_sync' || nodeKey.endsWith('_pull')) {
-                final pendingTime = data['caretakerLastSyncTime'] as int? ?? 0;
-                DbHelper.log('SyncRepo: Pre-sync pipeline - consuming pending pull request $nodeKey (lastSync=$pendingTime) prior to push.');
+              } else if (eventType == 'request_sync' ||
+                  nodeKey.endsWith('_pull')) {
+                final pendingTime =
+                    data['caretakerLastSyncTime'] as int? ?? 0;
+                DbHelper.log(
+                  'SyncRepo: Pre-sync pipeline - consuming pending pull request $nodeKey (lastSync=$pendingTime) prior to push.',
+                );
                 caretakerLastSyncTime = pendingTime;
                 await inboxRef.child(nodeKey).remove();
                 break;
@@ -126,11 +94,14 @@ class SyncRepositoryImpl implements SyncRepository {
             }
           }
         } catch (e) {
-          DbHelper.log('SyncRepo: Warning checking inbox $targetUid in pre-sync pipeline: $e');
+          DbHelper.log(
+            'SyncRepo: Warning checking inbox $targetUid in pre-sync pipeline: $e',
+          );
         }
       }
     }
 
+    // 3. Fetch dirty rows based on role and sync mode
     List<Map<String, dynamic>> profiles;
     List<Map<String, dynamic>> medicines;
     List<Map<String, dynamic>> schedules;
@@ -140,79 +111,56 @@ class SyncRepositoryImpl implements SyncRepository {
       if (caretakerLastSyncTime != null) {
         // Parent is responding to a Caretaker pull request
         if (caretakerLastSyncTime > 0) {
-          final queryTime = caretakerLastSyncTime;
-          profiles = await db.query(
-            AppConstants.tableProfiles,
-            where: 'updated_at > ? OR is_dirty = ?',
-            whereArgs: [queryTime, 1],
+          final ts = caretakerLastSyncTime;
+          profiles = await localDataSource.getDirtyProfiles(
+            activeProfileId,
+            sinceTimestamp: ts,
           );
-          medicines = await db.query(
-            AppConstants.tableMedicines,
-            where: 'updated_at > ? OR is_dirty = ?',
-            whereArgs: [queryTime, 1],
+          medicines = await localDataSource.getDirtyMedicines(
+            activeProfileId,
+            sinceTimestamp: ts,
           );
-          schedules = await db.query(
-            AppConstants.tableSchedules,
-            where: 'updated_at > ? OR is_dirty = ?',
-            whereArgs: [queryTime, 1],
+          schedules = await localDataSource.getDirtySchedules(
+            activeProfileId,
+            sinceTimestamp: ts,
           );
-          logs = await db.query(
-            AppConstants.tableMedicineLog,
-            where: 'updated_at > ? OR is_dirty = ?',
-            whereArgs: [queryTime, 1],
+          logs = await localDataSource.getDirtyLogs(
+            activeProfileId,
+            sinceTimestamp: ts,
           );
         } else {
           // Full restore pull response for Caretaker (caretakerLastSyncTime == 0)
-          profiles = await db.query(AppConstants.tableProfiles);
-          medicines = await db.query(AppConstants.tableMedicines);
-          schedules = await db.query(AppConstants.tableSchedules);
-          logs = await db.query(AppConstants.tableMedicineLog);
+          final all = await localDataSource.getAllSyncableRows();
+          profiles = all['profiles']!;
+          medicines = all['medicines']!;
+          schedules = all['schedules']!;
+          logs = all['logs']!;
         }
       } else {
-        // Parent initiating push sync from Parent app: query ONLY local dirty modifications
-        profiles = await db.query(
-          AppConstants.tableProfiles,
-          where: 'is_dirty = ?',
-          whereArgs: [1],
+        // Parent initiating push sync: query ONLY local dirty modifications
+        profiles = await localDataSource.getDirtyProfiles(
+          activeProfileId,
+          allDirty: true,
         );
-        medicines = await db.query(
-          AppConstants.tableMedicines,
-          where: 'is_dirty = ?',
-          whereArgs: [1],
+        medicines = await localDataSource.getDirtyMedicines(
+          activeProfileId,
+          allDirty: true,
         );
-        schedules = await db.query(
-          AppConstants.tableSchedules,
-          where: 'is_dirty = ?',
-          whereArgs: [1],
+        schedules = await localDataSource.getDirtySchedules(
+          activeProfileId,
+          allDirty: true,
         );
-        logs = await db.query(
-          AppConstants.tableMedicineLog,
-          where: 'is_dirty = ?',
-          whereArgs: [1],
+        logs = await localDataSource.getDirtyLogs(
+          activeProfileId,
+          allDirty: true,
         );
       }
     } else {
       // Caretaker pushing modifications for the parent profile back to the parent
-      profiles = await db.query(
-        AppConstants.tableProfiles,
-        where: 'id = ? AND is_dirty = ?',
-        whereArgs: [activeProfileId, 1],
-      );
-      medicines = await db.query(
-        AppConstants.tableMedicines,
-        where: 'profile_id = ? AND is_dirty = ?',
-        whereArgs: [activeProfileId, 1],
-      );
-      schedules = await db.query(
-        AppConstants.tableSchedules,
-        where: 'profile_id = ? AND is_dirty = ?',
-        whereArgs: [activeProfileId, 1],
-      );
-      logs = await db.query(
-        AppConstants.tableMedicineLog,
-        where: 'profile_id = ? AND is_dirty = ?',
-        whereArgs: [activeProfileId, 1],
-      );
+      profiles = await localDataSource.getDirtyProfiles(activeProfileId);
+      medicines = await localDataSource.getDirtyMedicines(activeProfileId);
+      schedules = await localDataSource.getDirtySchedules(activeProfileId);
+      logs = await localDataSource.getDirtyLogs(activeProfileId);
     }
 
     if (caretakerLastSyncTime == null &&
@@ -224,7 +172,7 @@ class SyncRepositoryImpl implements SyncRepository {
       return;
     }
 
-    // 3. Build payload map (only include keys that have non-empty records)
+    // 4. Build payload map (only include keys that have non-empty records)
     final Map<String, dynamic> payload = {};
     if (profiles.isNotEmpty) payload['profiles'] = profiles;
     if (medicines.isNotEmpty) payload['medicines'] = medicines;
@@ -237,11 +185,11 @@ class SyncRepositoryImpl implements SyncRepository {
 
     if (isOwner) {
       // Fetch all active connected caretakers from Cloud/RTDB
-      final profileData = await remoteDataSource.lookupProfileByAppCode(
-        ownerAppCode,
-      );
-      if (profileData == null || !profileData.containsKey('connections'))
+      final profileData =
+          await remoteDataSource.lookupProfileByAppCode(ownerAppCode);
+      if (profileData == null || !profileData.containsKey('connections')) {
         return;
+      }
 
       final connections = Map<String, dynamic>.from(
         profileData['connections'] as Map,
@@ -271,7 +219,7 @@ class SyncRepositoryImpl implements SyncRepository {
 
     if (recipients.isEmpty) return;
 
-    // 5. Package and push to each recipient
+    // 5. Resolve sender UID
     final String senderUid;
     if (currentAuthUid.isNotEmpty) {
       senderUid = currentAuthUid;
@@ -281,35 +229,31 @@ class SyncRepositoryImpl implements SyncRepository {
       senderUid = activeProfileId;
     }
 
+    // 6. Package and push to each recipient
     for (final recipient in recipients) {
       final recipientUid = recipient['uid']!;
       final recipientCode = recipient['code']!;
 
       // Resolve recipient FCM token
-      final recipientProfile = await remoteDataSource.lookupProfileByAppCode(
-        recipientCode,
-      );
-      final recipientFcmToken = recipientProfile?['fcm_token'] as String? ?? '';
+      final recipientProfile =
+          await remoteDataSource.lookupProfileByAppCode(recipientCode);
+      final recipientFcmToken =
+          recipientProfile?['fcm_token'] as String? ?? '';
 
       final syncId = const Uuid().v4();
 
       try {
-        await db.insert(
-          AppConstants.tableSyncQueue,
-          {
-            'sync_id': syncId,
-            'sender_uid': senderUid,
-            'sender_app_id': ownerAppCode,
-            'event_type': 'outgoing_sync',
-            'compressed_data': payloadJson,
-            'status': 'pending_ack',
-            'timestamp': DateTime.now().toUtc().millisecondsSinceEpoch,
-            'received_at': DateTime.now().toUtc().millisecondsSinceEpoch,
-          },
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
+        await localDataSource.insertSyncQueueEntry({
+          'sync_id': syncId,
+          'sender_uid': senderUid,
+          'sender_app_id': ownerAppCode,
+          'event_type': 'outgoing_sync',
+          'compressed_data': payloadJson,
+          'status': 'pending_ack',
+          'timestamp': DateTime.now().toUtc().millisecondsSinceEpoch,
+          'received_at': DateTime.now().toUtc().millisecondsSinceEpoch,
+        });
 
-        // Upload sync payload to recipient's inbox (fire-and-forget to cloud)
         await remoteDataSource.uploadSyncPayload(
           recipientUid: recipientUid,
           senderUid: senderUid,
@@ -338,40 +282,13 @@ class SyncRepositoryImpl implements SyncRepository {
   ) async {
     // Caretakers no longer write pull requests to RTDB.
     // Sync data is pushed directly by the Parent upon modifications or pairing acceptance.
-    DbHelper.log('SyncRepo: requestPullSync invoked. Skipping pull request node creation.');
+    DbHelper.log(
+      'SyncRepo: requestPullSync invoked. Skipping pull request node creation.',
+    );
   }
 
   @override
   Future<bool> hasDirtyRows(String? activeProfileId) async {
-    final db = await DbHelper.instance.database;
-    if (activeProfileId != null) {
-      final profilesCount = Sqflite.firstIntValue(await db.rawQuery(
-        'SELECT COUNT(*) FROM ${AppConstants.tableProfiles} WHERE id = ? AND is_dirty = ?',
-        [activeProfileId, 1],
-      )) ?? 0;
-      final medicinesCount = Sqflite.firstIntValue(await db.rawQuery(
-        'SELECT COUNT(*) FROM ${AppConstants.tableMedicines} WHERE profile_id = ? AND is_dirty = ?',
-        [activeProfileId, 1],
-      )) ?? 0;
-      final schedulesCount = Sqflite.firstIntValue(await db.rawQuery(
-        'SELECT COUNT(*) FROM ${AppConstants.tableSchedules} WHERE profile_id = ? AND is_dirty = ?',
-        [activeProfileId, 1],
-      )) ?? 0;
-      final logsCount = Sqflite.firstIntValue(await db.rawQuery(
-        'SELECT COUNT(*) FROM ${AppConstants.tableMedicineLog} WHERE profile_id = ? AND is_dirty = ?',
-        [activeProfileId, 1],
-      )) ?? 0;
-      if ((profilesCount + medicinesCount + schedulesCount + logsCount) > 0) {
-        return true;
-      }
-    }
-    final totalUnscoped = Sqflite.firstIntValue(await db.rawQuery('''
-      SELECT 
-        (SELECT COUNT(*) FROM ${AppConstants.tableProfiles} WHERE is_dirty = 1) +
-        (SELECT COUNT(*) FROM ${AppConstants.tableMedicines} WHERE is_dirty = 1) +
-        (SELECT COUNT(*) FROM ${AppConstants.tableSchedules} WHERE is_dirty = 1) +
-        (SELECT COUNT(*) FROM ${AppConstants.tableMedicineLog} WHERE is_dirty = 1)
-    ''')) ?? 0;
-    return totalUnscoped > 0;
+    return localDataSource.hasDirtyRows(activeProfileId);
   }
 }

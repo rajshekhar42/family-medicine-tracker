@@ -328,3 +328,17 @@ when ever pair happens, mark all the rows dirty again.
 
 
 Parent log-out and log-in again, parent data in caretaker is lost, and no more further sync is happening-sync payload in rtdb is never consumed, even after manula sync from careter profile menu.
+
+
+
+
+
+
+
+
+
+no, do not run the run_sync_emulator_only.sh, 
+run this only test_google_login_only.py and do required modification to test this senario 
+
+Parent log-out and log-in again, parent data in caretaker is lost, and no more further sync is happening-sync payload in rtdb is never consumed, even after manula sync from careter profile menu.
+

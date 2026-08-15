@@ -4,6 +4,7 @@ import 'package:family_medicine_tracker/core/utils/db_helper.dart';
 import 'package:family_medicine_tracker/core/constants/app_constants.dart';
 import 'package:family_medicine_tracker/features/sync/data/repositories/sync_repository_impl.dart';
 import 'package:family_medicine_tracker/features/sync/data/datasources/sync_remote_datasource.dart';
+import 'package:family_medicine_tracker/features/sync/data/datasources/sync_local_datasource.dart';
 
 void main() {
   sqfliteFfiInit();
@@ -20,7 +21,10 @@ void main() {
     await db.delete(AppConstants.tableMedicineLog);
     await db.delete(AppConstants.tableSettings);
 
-    repo = SyncRepositoryImpl(remoteDataSource: SyncRemoteDataSourceInMemory());
+    repo = SyncRepositoryImpl(
+      remoteDataSource: SyncRemoteDataSourceInMemory(),
+      localDataSource: SyncLocalDataSourceImpl(),
+    );
   });
 
   test('hasDirtyRows returns false when all tables are clean', () async {
