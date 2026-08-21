@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../domain/entities/medicine.dart';
 import '../providers/medications_provider.dart';
@@ -32,38 +30,50 @@ class MedicinesListScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final listState = ref.watch(medicinesListProvider);
     final activeProfile = ref.watch(activeProfileProvider);
     final isReadOnly = activeProfile != null && !activeProfile.isOwner;
     final canManageMedicines = activeProfile != null && (activeProfile.isOwner || activeProfile.appCode != null);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('Medicines List'),
-            const SizedBox(width: 12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: AppColors.cardFill,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                activeProfile?.profileName ?? 'User',
-                style: AppTextStyles.labelLarge.copyWith(
-                  color: AppColors.accent,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+        title: const Text('Medicines List'),
+        backgroundColor: Colors.transparent,
+        centerTitle: false,
+        actions: [
+          if (activeProfile != null)
+            Padding(
+              padding: const EdgeInsets.only(right: 16.0),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 130),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: colorScheme.surface,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      activeProfile.profileName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: textTheme.labelLarge?.copyWith(
+                        color: colorScheme.secondary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
-          ],
-        ),
-        backgroundColor: AppColors.transparent,
-        centerTitle: true,
+        ],
       ),
       body: listState.when(
         data: (medicines) {
@@ -77,14 +87,14 @@ class MedicinesListScreen extends ConsumerWidget {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.medication_outlined, size: 64, color: AppColors.textSecondary),
-                    const SizedBox(height: 16),
-                    const Text('No medicines found', style: AppTextStyles.titleMedium),
+                    Icon(Icons.medication_outlined, size: 64, color: colorScheme.onSurface.withOpacity(0.5)),
+                    SizedBox(height: 16),
+                    Text('No medicines found', style: textTheme.titleMedium),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       'You haven\'t added any medicines yet.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: AppColors.textSecondary),
+                      style: TextStyle(color: colorScheme.onSurface.withOpacity(0.5)),
                     ),
                     if (canManageMedicines) ...[
                       const SizedBox(height: 24),
@@ -103,9 +113,9 @@ class MedicinesListScreen extends ConsumerWidget {
             padding: const EdgeInsets.all(20.0),
             children: [
               if (activeMeds.isNotEmpty) ...[
-                const Padding(
+                Padding(
                   padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-                  child: Text('Active Schedules', style: AppTextStyles.titleSmall),
+                  child: Text('Active Schedules', style: textTheme.titleSmall),
                 ),
                 ListView.separated(
                   shrinkWrap: true,
@@ -120,9 +130,9 @@ class MedicinesListScreen extends ConsumerWidget {
                 const SizedBox(height: 24),
               ],
               if (inactiveMeds.isNotEmpty) ...[
-                const Padding(
+                Padding(
                   padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-                  child: Text('Inactive / Paused', style: AppTextStyles.titleSmall),
+                  child: Text('Inactive / Paused', style: textTheme.titleSmall),
                 ),
                 ListView.separated(
                   shrinkWrap: true,
@@ -163,20 +173,20 @@ class MedicinesListScreen extends ConsumerWidget {
       child: ListTile(
         leading: Icon(
           _getIcon(med.type),
-          color: med.active ? AppColors.accent : AppColors.textSecondary,
+          color: med.active ? Theme.of(context).colorScheme.secondary : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
           size: 28,
         ),
         title: Text(
           med.name,
-          style: AppTextStyles.labelLarge.copyWith(
-            color: med.active ? AppColors.textPrimary : AppColors.textSecondary,
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            color: med.active ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
           ),
         ),
         subtitle: Text(
           '$dosageStr • $quantityStr • ${med.frequency}',
-          style: AppTextStyles.bodySmall,
+          style: Theme.of(context).textTheme.bodySmall,
         ),
-        trailing: isReadOnly ? null : const Icon(Icons.chevron_right, color: AppColors.accent),
+        trailing: isReadOnly ? null : Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.secondary),
         onTap: isReadOnly
             ? null
             : () {

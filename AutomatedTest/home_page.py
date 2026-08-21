@@ -68,44 +68,80 @@ class HomePage:
 
     def trigger_google_login(self, email_pattern=None):
         print(f"[{self.device_id}] Triggering Google Login in drawer...")
-        btn = find_element(self.device_id, "Sign in with Google")
-        if btn:
-            tap(self.device_id, btn[0], btn[1])
-        else:
-            print(f"[{self.device_id}] ❌ Sign in button not found. Tapping fallback.")
-            # Fallback coordinates for Google Sign In inside drawer
-            tap(self.device_id, 540, 1750)
-        time.sleep(3.5)
-        print(f"[{self.device_id}] Google login triggered. Selecting account...")
-        return self.select_google_account(email_pattern)
+        if find_element(self.device_id, "MY APP CODE") or find_element(self.device_id, "Sync Now"):
+            print(f"[{self.device_id}] Already logged in.")
+            return True
+
+        for attempt in range(3):
+            btn = find_element(self.device_id, "Sign in with Google")
+            if not btn:
+                # Scroll drawer down to ensure button is visible
+                run_adb(self.device_id, ["shell", "input", "swipe", "400", "1800", "400", "1200"])
+                time.sleep(1)
+                btn = find_element(self.device_id, "Sign in with Google")
+
+            if btn:
+                print(f"[{self.device_id}] Tapping Sign in with Google at ({btn[0]}, {btn[1]})...")
+                tap(self.device_id, btn[0], btn[1])
+            else:
+                print(f"[{self.device_id}] ❌ Sign in button not found. Tapping fallback.")
+                tap(self.device_id, 399, 2214)
+
+            time.sleep(3.5)
+            print(f"[{self.device_id}] Google login triggered. Selecting account...")
+            if self.select_google_account(email_pattern):
+                return True
+
+            if find_element(self.device_id, "MY APP CODE"):
+                return True
+            time.sleep(1)
+
+        return False
 
     def select_google_account(self, email_pattern=None):
         print(f"[{self.device_id}] Selecting Google Account (pattern={email_pattern})...")
+        device_account = None
+        try:
+            out, _ = run_adb(self.device_id, ["shell", "dumpsys", "account"])
+            m = re.search(r"Account\s*\{name=([^,]+),\s*type=com\.google\}", out)
+            if m:
+                device_account = m.group(1).strip()
+                print(f"[{self.device_id}] Discovered device Google account: {device_account}")
+        except Exception as e:
+            print(f"[{self.device_id}] Error querying dumpsys account: {e}")
+
         account_pos = None
-        for attempt in range(5):
-            if email_pattern:
+        for attempt in range(6):
+            if device_account:
+                prefix = device_account.split('@')[0]
+                account_pos = find_element(self.device_id, device_account) or find_element(self.device_id, prefix)
+            if not account_pos and email_pattern:
                 prefix = email_pattern.split('@')[0]
-                account_pos = find_element(self.device_id, prefix) or find_element(self.device_id, email_pattern)
+                account_pos = find_element(self.device_id, email_pattern) or find_element(self.device_id, prefix)
             if not account_pos:
-                account_pos = find_element(self.device_id, "@gmail.com")
+                account_pos = find_element(self.device_id, r"[\w\.-]+@[\w\.-]+\.\w+") or find_element(self.device_id, "@gmail.com")
             if not account_pos:
-                account_pos = find_element(self.device_id, "Choose an account")
-                if account_pos:
-                    account_pos = (account_pos[0], account_pos[1] + 120)
+                account_pos = find_element(self.device_id, "Continue as")
+            if not account_pos:
+                choose_elem = find_element(self.device_id, "Choose an account")
+                if choose_elem:
+                    account_pos = (choose_elem[0], choose_elem[1] + 120)
+
             if account_pos:
+                print(f"[{self.device_id}] Tapping Google Account at ({account_pos[0]}, {account_pos[1]})...")
                 tap(self.device_id, account_pos[0], account_pos[1])
                 time.sleep(6)
                 return True
             time.sleep(2)
         
         print(f"[{self.device_id}] ⚠️ Account selector not found dynamically, tapping fallback...")
-        tap(self.device_id, 417, 1342)  # Taps Gmail account coordinates directly
+        tap(self.device_id, 417, 1342)
         time.sleep(6)
         return False
 
     def get_app_code(self):
         print(f"[{self.device_id}] Retrieving App Code...")
-        app_code_pattern = r"MY APP CODE\s+([A-Z0-9]{6,7})"
+        app_code_pattern = r"MY APP CODE\s+([A-Z0-9]{6,8})"
         
         # Poll up to 8 times (16 seconds total) waiting for code generation
         for attempt in range(8):
@@ -143,40 +179,58 @@ class HomePage:
             tap(self.device_id, 683, 546)
         time.sleep(2)
         
-        from adb_helper import wait_for_edit_texts
+        from adb_helper import wait_for_edit_texts, find_edit_texts
         fields = wait_for_edit_texts(self.device_id, count=2, timeout=10)
         if len(fields) >= 2:
             print(f"[{self.device_id}] Entering parent code '{parent_code}' into field 1 (App Code) at {fields[0]}...")
             tap(self.device_id, fields[0][0], fields[0][1])
+            time.sleep(0.5)
             type_text(self.device_id, parent_code)
-            hide_keyboard(self.device_id)
-            time.sleep(1)
+            time.sleep(0.5)
 
-            print(f"[{self.device_id}] Entering profile name '{profile_name}' into field 2 (Display Name) at {fields[1]}...")
-            tap(self.device_id, fields[1][0], fields[1][1])
-            type_text(self.device_id, profile_name)
-            hide_keyboard(self.device_id)
-            time.sleep(1)
+            # Re-locate EditText fields (which may have shifted up when keyboard opened)
+            current_fields = find_edit_texts(self.device_id)
+            field2_pos = None
+            if len(current_fields) >= 2:
+                field2_pos = current_fields[1]
+            elif len(fields) >= 2:
+                field2_pos = fields[1]
+
+            if not field2_pos:
+                field2_pos = find_element(self.device_id, "e.g. Father, Mother") or find_element(self.device_id, "Display Name")
+
+            if field2_pos:
+                print(f"[{self.device_id}] Entering profile name '{profile_name}' into field 2 (Display Name) at {field2_pos}...")
+                tap(self.device_id, field2_pos[0], field2_pos[1])
+                time.sleep(0.5)
+                type_text(self.device_id, profile_name)
+                time.sleep(0.5)
+            else:
+                print(f"[{self.device_id}] ⚠️ Display Name field could not be found.")
         else:
             print(f"[{self.device_id}] ⚠️ EditText fields not found dynamically, tapping fallback coordinates...")
             tap(self.device_id, 540, 936)
+            time.sleep(0.5)
             type_text(self.device_id, parent_code)
-            hide_keyboard(self.device_id)
-            time.sleep(1)
+            time.sleep(0.5)
 
             tap(self.device_id, 540, 1109)
+            time.sleep(0.5)
             type_text(self.device_id, profile_name)
-            hide_keyboard(self.device_id)
-            time.sleep(1)
+            time.sleep(0.5)
 
-            
-        submit_btn = find_element(self.device_id, r"^Add$") or find_element(self.device_id, "Add & Connect")
+        time.sleep(1)
+        submit_btn = (
+            find_element(self.device_id, r"^Add$")
+            or find_element(self.device_id, r"^\s*Add\s*$")
+            or find_element(self.device_id, "Add & Connect")
+        )
         if submit_btn:
             print(f"[{self.device_id}] Tapping submit 'Add' button at ({submit_btn[0]}, {submit_btn[1]})...")
             tap(self.device_id, submit_btn[0], submit_btn[1])
         else:
             print(f"[{self.device_id}] ⚠️ Submit button not found. Tapping fallback.")
-            tap(self.device_id, 850, 1450)
+            tap(self.device_id, 749, 1574)
         time.sleep(3)
 
 
@@ -356,6 +410,27 @@ class HomePage:
         else:
             tap(self.device_id, 399, 1570)
         time.sleep(3)
+
+    def sign_out(self):
+        print(f"[{self.device_id}] Signing out...")
+        self.open_drawer()
+        time.sleep(1.5)
+        sign_out_btn = find_element(self.device_id, "Sign Out")
+        if sign_out_btn:
+            tap(self.device_id, sign_out_btn[0], sign_out_btn[1])
+            print(f"[{self.device_id}] Tapped Sign Out button in drawer.")
+        else:
+            print(f"[{self.device_id}] ⚠️ Sign Out button not found, tapping fallback (450, 2069)...")
+            tap(self.device_id, 450, 2069)
+        time.sleep(1.5)
+        # Handle confirmation dialog if present
+        confirm_btn = wait_for_element(self.device_id, "Sign Out", timeout=4) or find_element(self.device_id, "Sign Out")
+        if confirm_btn:
+            print(f"[{self.device_id}] Confirming sign out dialog at {confirm_btn}...")
+            tap(self.device_id, confirm_btn[0], confirm_btn[1])
+            time.sleep(2)
+        self.close_drawer()
+        time.sleep(1.5)
 
     def go_back(self):
         print(f"[{self.device_id}] Pressing back (hardware KEYCODE_BACK)...")

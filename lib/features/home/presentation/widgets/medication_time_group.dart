@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/date_time_utils.dart';
 import '../../domain/entities/scheduled_dose.dart';
 import 'medication_card.dart';
@@ -24,6 +22,8 @@ class MedicationTimeGroup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final displayTime = DateTimeUtils.formatTimeString(time24h);
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 24.0),
@@ -35,16 +35,15 @@ class MedicationTimeGroup extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 8.0),
             child: Row(
               children: [
-                const Icon(
+                Icon(
                   Icons.access_time_filled_rounded,
                   size: 16,
-                  color: AppColors.accent,
+                  color: colorScheme.secondary,
                 ),
                 const SizedBox(width: 6),
                 Text(
                   displayTime,
-                  style: AppTextStyles.labelLarge.copyWith(
-                    color: AppColors.textPrimary,
+                  style: textTheme.labelLarge?.copyWith(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
                   ),

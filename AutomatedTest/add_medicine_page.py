@@ -1,7 +1,7 @@
 import time
 import re
 import xml.etree.ElementTree as ET
-from adb_helper import find_element, tap, type_text, run_adb, hide_keyboard, dismiss_permission_dialogs, get_dump
+from adb_helper import find_element, tap, type_text, run_adb, hide_keyboard, dismiss_permission_dialogs, get_dump, wait_for_element
 
 class AddMedicinePage:
     def __init__(self, device_id):
@@ -12,8 +12,8 @@ class AddMedicinePage:
         
         # 1. Enter Name
         name_field = None
-        for attempt in range(5):
-            name_field = find_element(self.device_id, "Enter name")
+        for _ in range(5):
+            name_field = find_element(self.device_id, "Enter name") or find_element(self.device_id, "Medication Name")
             if name_field:
                 break
             time.sleep(1)
@@ -31,81 +31,67 @@ class AddMedicinePage:
         # Send KEYCODE_ENTER (66) to submit field and dismiss soft keyboard
         print(f"[{self.device_id}] Sending KEYCODE_ENTER (66) to submit field...")
         run_adb(self.device_id, ["shell", "input", "keyevent", "66"])
-        time.sleep(2)
+        time.sleep(1.5)
 
         # Check if Page 1 Next is still present, tap if needed
-        next_btn = find_element(self.device_id, "Next")
+        next_btn = wait_for_element(self.device_id, "Next", timeout=5) or find_element(self.device_id, "Next")
         if next_btn:
             print(f"[{self.device_id}] Tapping Next button on Page 1...")
             btn_y = min(next_btn[1], 2240)
             tap(self.device_id, next_btn[0], btn_y)
-            time.sleep(2.5)
-
-
+            time.sleep(2)
 
         # 2. Select Frequency if not default
         if frequency_option != "Once a Day":
             print(f"[{self.device_id}] Selecting frequency: {frequency_option}...")
-            freq_dropdown = None
-            for attempt in range(5):
-                freq_dropdown = find_element(self.device_id, "Once a Day")
-                if freq_dropdown:
-                    break
+            time.sleep(1)
+            # Direct preset check on 2x2 grid (e.g. "2 times, Daily", "3 times, Daily")
+            target_elem = find_element(self.device_id, frequency_option)
+            if target_elem:
+                tap(self.device_id, target_elem[0], target_elem[1])
                 time.sleep(1)
-                
-            if freq_dropdown:
-                tap(self.device_id, freq_dropdown[0], freq_dropdown[1])
-                time.sleep(1.5)
-                
-                target_option = find_element(self.device_id, frequency_option)
-                if target_option:
-                    tap(self.device_id, target_option[0], target_option[1])
-                else:
-                    print(f"[{self.device_id}] ❌ Target frequency option '{frequency_option}' not found in dropdown.")
             else:
-                print(f"[{self.device_id}] ❌ Frequency dropdown not found.")
+                # Custom frequency selection via "Custom" tile in grid
+                custom_tile = find_element(self.device_id, "Custom")
+                if custom_tile:
+                    tap(self.device_id, custom_tile[0], custom_tile[1])
+                    time.sleep(1)
+                    dropdown = find_element(self.device_id, "X times, Daily") or find_element(self.device_id, "Once a Week")
+                    if dropdown:
+                        tap(self.device_id, dropdown[0], dropdown[1])
+                        time.sleep(1)
+                        opt_elem = find_element(self.device_id, frequency_option)
+                        if opt_elem:
+                            tap(self.device_id, opt_elem[0], opt_elem[1])
+                            time.sleep(1)
+                        else:
+                            print(f"[{self.device_id}] ❌ Target custom frequency '{frequency_option}' not found in dropdown.")
+                else:
+                    print(f"[{self.device_id}] ❌ Frequency option or Custom tile '{frequency_option}' not found.")
             time.sleep(1)
 
         # Tap Next to go to Page 3
         print(f"[{self.device_id}] Tapping Next button on Page 2...")
-        next_btn = find_element(self.device_id, "Next")
-        if next_btn and next_btn[0] > 550:
+        next_btn = wait_for_element(self.device_id, "Next", timeout=5) or find_element(self.device_id, "Next")
+        if next_btn and next_btn[0] > 500:
             btn_y = min(next_btn[1], 2240)
             tap(self.device_id, next_btn[0], btn_y)
         else:
             tap(self.device_id, 789, 2240)
-        time.sleep(2.5)
+        time.sleep(2)
 
-
-        # 3. Tap Add Medication/Save button once and verify screen pop or offline SnackBar
-        save_btn = None
-        try:
-            dump_file = get_dump(self.device_id)
-            tree = ET.parse(dump_file)
-            root = tree.getroot()
-            pattern = re.compile(r"Add Medication|Save Changes|Save", re.IGNORECASE)
-            matches = []
-            for node in root.iter('node'):
-                text = node.attrib.get('text', '')
-                desc = node.attrib.get('content-desc', '')
-                bounds = node.attrib.get('bounds', '')
-                if pattern.search(text) or pattern.search(desc):
-                    m = re.match(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', bounds)
-                    if m:
-                        left, top, right, bottom = map(int, m.groups())
-                        x = (left + right) // 2
-                        y = (top + bottom) // 2
-                        if y > 2000:
-                            matches.append((x, min(y, 2240)))
-            if matches:
-                matches.sort(key=lambda item: item[1], reverse=True)
-                save_btn = matches[0]
-        except Exception as e:
-            print(f"[{self.device_id}] Error searching submit button: {e}")
-
+        # 3. Tap Add Medication/Save button on Page 3
+        print(f"[{self.device_id}] Tapping submit button on Page 3...")
+        save_btn = (
+            wait_for_element(self.device_id, "Add Medication", timeout=5)
+            or wait_for_element(self.device_id, "Save Changes", timeout=3)
+            or find_element(self.device_id, "Add Medication")
+            or find_element(self.device_id, "Save Changes")
+        )
         if save_btn:
             print(f"[{self.device_id}] Tapping submit button at ({save_btn[0]}, {save_btn[1]})...")
-            tap(self.device_id, save_btn[0], save_btn[1])
+            btn_y = min(save_btn[1], 2240)
+            tap(self.device_id, save_btn[0], btn_y)
         else:
             print(f"[{self.device_id}] Tapping fallback submit button (789, 2240)...")
             tap(self.device_id, 789, 2240)

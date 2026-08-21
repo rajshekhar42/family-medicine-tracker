@@ -100,6 +100,23 @@ class DbMigrationV3 implements DbMigration {
   }
 }
 
+/// v3 → v4: Adds `dark_mode_enabled` column to settings.
+class DbMigrationV4 implements DbMigration {
+  @override
+  int get targetVersion => 4;
+
+  @override
+  Future<void> apply(Database db) async {
+    try {
+      await db.execute(
+        'ALTER TABLE ${AppConstants.tableSettings} ADD COLUMN dark_mode_enabled INTEGER NOT NULL DEFAULT 0',
+      );
+    } catch (_) {
+      // Column already exists — safe to skip
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Migration runner — the only place that needs to change when adding a new
 // schema version: append a new DbMigration to the list below.
@@ -117,6 +134,7 @@ class DbMigrationRunner {
   static final List<DbMigration> migrations = [
     DbMigrationV2(),
     DbMigrationV3(),
+    DbMigrationV4(),
   ];
 
   /// Runs all migrations whose [DbMigration.targetVersion] is in

@@ -9,6 +9,7 @@ class SettingsModel extends AppSettings {
     required super.remindersEnabled,
     required super.soundEnabled,
     required super.gracePeriodMinutes,
+    required super.darkModeEnabled,
     required this.updatedAt,
     required this.isDirty,
   });
@@ -19,6 +20,7 @@ class SettingsModel extends AppSettings {
       remindersEnabled: settings.remindersEnabled,
       soundEnabled: settings.soundEnabled,
       gracePeriodMinutes: settings.gracePeriodMinutes,
+      darkModeEnabled: settings.darkModeEnabled,
       updatedAt: updatedAt ?? DateTime.now().toUtc().millisecondsSinceEpoch,
       isDirty: isDirty,
     );
@@ -30,6 +32,7 @@ class SettingsModel extends AppSettings {
       remindersEnabled: (map['reminders_enabled'] as int) == 1,
       soundEnabled: (map['sound_enabled'] as int) == 1,
       gracePeriodMinutes: map['grace_period_minutes'] as int,
+      darkModeEnabled: (map['dark_mode_enabled'] as int?) == 1,
       updatedAt: map['updated_at'] as int,
       isDirty: map['is_dirty'] as int,
     );
@@ -41,6 +44,7 @@ class SettingsModel extends AppSettings {
       'reminders_enabled': remindersEnabled ? 1 : 0,
       'sound_enabled': soundEnabled ? 1 : 0,
       'grace_period_minutes': gracePeriodMinutes,
+      'dark_mode_enabled': darkModeEnabled ? 1 : 0,
       'updated_at': updatedAt,
       'is_dirty': isDirty,
     };
@@ -52,6 +56,7 @@ class SettingsModel extends AppSettings {
       remindersEnabled: remindersEnabled,
       soundEnabled: soundEnabled,
       gracePeriodMinutes: gracePeriodMinutes,
+      darkModeEnabled: darkModeEnabled,
     );
   }
 }

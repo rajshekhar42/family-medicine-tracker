@@ -39,9 +39,11 @@ void main() {
 
     // Verify Onboarding Screen is displayed directly with Profile Form
     expect(find.text('FamilyMediCare'), findsOneWidget);
-    expect(find.text('Set Up Your Profile'), findsOneWidget);
-    expect(find.text('Profile Name'), findsOneWidget);
+    expect(find.text('Who are we tracking for?'), findsOneWidget);
+    expect(find.text('Myself'), findsOneWidget);
+    expect(find.text('My family'), findsOneWidget);
+    expect(find.text('What should we call you?'), findsOneWidget);
     expect(find.byType(TextFormField), findsOneWidget);
-    expect(find.text('Create Profile & Start'), findsOneWidget);
+    expect(find.text('Create profile & start'), findsOneWidget);
   });
 }

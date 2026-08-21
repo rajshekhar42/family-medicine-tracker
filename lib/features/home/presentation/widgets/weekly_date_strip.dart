@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
 import '../providers/home_provider.dart';
 
 class WeeklyDateStrip extends ConsumerStatefulWidget {
@@ -98,6 +96,9 @@ class _WeeklyDateStripState extends ConsumerState<WeeklyDateStrip> {
   }
 
   Widget _buildWeekRow(DateTime targetSunday, DateTime selectedDate) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
       child: Row(
@@ -121,9 +122,9 @@ class _WeeklyDateStripState extends ConsumerState<WeeklyDateStrip> {
                 // Day abbreviation label
                 Text(
                   dayName,
-                  style: AppTextStyles.bodySmall.copyWith(
+                  style: textTheme.bodySmall?.copyWith(
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                    color: isSelected ? AppColors.accent : AppColors.textSecondary,
+                    color: isSelected ? colorScheme.secondary : colorScheme.onSurface.withOpacity(0.5),
                     fontSize: 10,
                   ),
                 ),
@@ -133,15 +134,15 @@ class _WeeklyDateStripState extends ConsumerState<WeeklyDateStrip> {
                   width: 38,
                   height: 38,
                   decoration: BoxDecoration(
-                    color: isSelected ? AppColors.accent : AppColors.transparent,
+                    color: isSelected ? colorScheme.secondary : Colors.transparent,
                     shape: BoxShape.circle,
                   ),
                   alignment: Alignment.center,
                   child: Text(
                     dayNum,
-                    style: AppTextStyles.bodyLarge.copyWith(
+                    style: textTheme.bodyLarge?.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: isSelected ? AppColors.white : AppColors.textPrimary,
+                      color: isSelected ? colorScheme.onSecondary : colorScheme.onSurface,
                       fontSize: 15,
                     ),
                   ),

@@ -593,15 +593,7 @@ def main():
     time.sleep(1.5)
     parent_app_code_before = parent_home.get_app_code()
     print(f"[{parent_id}] Parent App Code before logout: {parent_app_code_before}")
-    sign_out_btn = find_element(parent_id, "Sign Out")
-    if sign_out_btn:
-        tap(parent_id, sign_out_btn[0], sign_out_btn[1])
-        print(f"[{parent_id}] Tapped Sign Out button.")
-    else:
-        print(f"[{parent_id}] ⚠️ Sign Out button not found, tapping fallback (450, 2069)...")
-        tap(parent_id, 450, 2069)
-    time.sleep(3)
-    parent_home.close_drawer()
+    parent_home.sign_out()
     time.sleep(1.5)
 
     print(f"[{parent_id}] Parent logging back in with Google...")

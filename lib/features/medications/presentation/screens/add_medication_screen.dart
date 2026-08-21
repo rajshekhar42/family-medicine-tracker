@@ -5,9 +5,8 @@ import 'package:uuid/uuid.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:dartz/dartz.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/theme/app_colors.dart';
 import '../../../../core/utils/date_time_utils.dart';
 import '../../../../core/services/analytics_service.dart';
 import '../../../../core/services/crashlytics_service.dart';
@@ -27,10 +26,11 @@ import '../../../caretaker_medication/presentation/providers/caretaker_medicatio
 class AddMedicationScreen extends ConsumerStatefulWidget {
   final Medicine? editingMedicine;
 
-  const AddMedicationScreen({super.key, this.editingMedicine});
+  AddMedicationScreen({super.key, this.editingMedicine});
 
   @override
-  ConsumerState<AddMedicationScreen> createState() => _AddMedicationScreenState();
+  ConsumerState<AddMedicationScreen> createState() =>
+      _AddMedicationScreenState();
 }
 
 class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
@@ -61,12 +61,12 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
   void initState() {
     super.initState();
     _isEditing = widget.editingMedicine != null;
-    
+
     if (_isEditing) {
       final med = widget.editingMedicine!;
       _nameController.text = med.name;
       _selectedType = med.type;
-      
+
       if (med.dosageValue != null) {
         _dosageValueController.text = med.dosageValue.toString();
       }
@@ -78,15 +78,21 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
       _selectedQuantityUnit = med.quantityUnit;
 
       _frequencyOption = med.frequency;
-      _startDate = DateTime.fromMillisecondsSinceEpoch(med.startDate, isUtc: true);
-      
+      _startDate = DateTime.fromMillisecondsSinceEpoch(
+        med.startDate,
+        isUtc: true,
+      );
+
       if (med.endDate != null) {
-        _endDate = DateTime.fromMillisecondsSinceEpoch(med.endDate!, isUtc: true);
+        _endDate = DateTime.fromMillisecondsSinceEpoch(
+          med.endDate!,
+          isUtc: true,
+        );
         _isContinuous = false;
       } else {
         _isContinuous = true;
       }
-      
+
       _isActive = med.active;
 
       _loadEditingSchedules();
@@ -95,20 +101,19 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
 
   Future<void> _loadEditingSchedules() async {
     setState(() => _isLoadingSchedules = true);
-    
+
     final repo = ref.read(medicationRepositoryProvider);
-    final result = await repo.getSchedulesForMedicine(medicineId: widget.editingMedicine!.id);
-    
-    result.fold(
-      (failure) {},
-      (schedules) {
-        setState(() {
-          _selectedTimes = schedules.map((s) => s.time).toList();
-          _frequencyCount = _selectedTimes.length;
-          _isLoadingSchedules = false;
-        });
-      },
+    final result = await repo.getSchedulesForMedicine(
+      medicineId: widget.editingMedicine!.id,
     );
+
+    result.fold((failure) {}, (schedules) {
+      setState(() {
+        _selectedTimes = schedules.map((s) => s.time).toList();
+        _frequencyCount = _selectedTimes.length;
+        _isLoadingSchedules = false;
+      });
+    });
   }
 
   @override
@@ -122,7 +127,7 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
   void _updateFrequencyCount(int count) {
     setState(() {
       _frequencyCount = count;
-      
+
       // Sync size of _selectedTimes to match the new count
       if (_selectedTimes.length < count) {
         final currentLen = _selectedTimes.length;
@@ -150,10 +155,16 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
       final dosageVal = double.tryParse(_dosageValueController.text);
       final quantityVal = double.tryParse(_quantityValueController.text);
 
-      final medicineId = _isEditing ? widget.editingMedicine!.id : const Uuid().v4();
+      final medicineId = _isEditing ? widget.editingMedicine!.id : Uuid().v4();
 
-      final startMidnight = DateTime.utc(_startDate.year, _startDate.month, _startDate.day);
-      final endMidnight = _endDate != null ? DateTime.utc(_endDate!.year, _endDate!.month, _endDate!.day) : null;
+      final startMidnight = DateTime.utc(
+        _startDate.year,
+        _startDate.month,
+        _startDate.day,
+      );
+      final endMidnight = _endDate != null
+          ? DateTime.utc(_endDate!.year, _endDate!.month, _endDate!.day)
+          : null;
 
       final medicine = Medicine(
         id: medicineId,
@@ -172,31 +183,50 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
       );
 
       final List<Schedule> schedules = List.generate(_frequencyCount, (index) {
-        final timeStr = index < _selectedTimes.length ? _selectedTimes[index] : '08:00';
+        final timeStr = index < _selectedTimes.length
+            ? _selectedTimes[index]
+            : '08:00';
         return Schedule(
-          id: const Uuid().v4(),
+          id: Uuid().v4(),
           profileId: activeProfile.id,
           medicineId: medicineId,
           time: timeStr,
         );
       });
 
-      ref.read(medicationFormStateProvider.notifier).state = const AsyncValue.loading();
-      
+      ref.read(medicationFormStateProvider.notifier).state =
+          const AsyncValue.loading();
+
       final Either<dynamic, void> result;
-      final isCaretakerForParent = activeProfile != null && !activeProfile.isOwner && activeProfile.appCode != null;
+      final isCaretakerForParent =
+          activeProfile != null &&
+          !activeProfile.isOwner &&
+          activeProfile.appCode != null;
       if (isCaretakerForParent) {
         if (_isEditing) {
-          final caretakerUpdateUseCase = ref.read(caretakerUpdateMedicationUseCaseProvider);
-          result = await caretakerUpdateUseCase(medicine: medicine, schedules: schedules);
+          final caretakerUpdateUseCase = ref.read(
+            caretakerUpdateMedicationUseCaseProvider,
+          );
+          result = await caretakerUpdateUseCase(
+            medicine: medicine,
+            schedules: schedules,
+          );
         } else {
-          final caretakerAddUseCase = ref.read(caretakerAddMedicationUseCaseProvider);
-          result = await caretakerAddUseCase(medicine: medicine, schedules: schedules);
+          final caretakerAddUseCase = ref.read(
+            caretakerAddMedicationUseCaseProvider,
+          );
+          result = await caretakerAddUseCase(
+            medicine: medicine,
+            schedules: schedules,
+          );
         }
       } else {
         if (_isEditing) {
           final updateUseCase = ref.read(updateMedicationUseCaseProvider);
-          result = await updateUseCase(medicine: medicine, schedules: schedules);
+          result = await updateUseCase(
+            medicine: medicine,
+            schedules: schedules,
+          );
         } else {
           final addUseCase = ref.read(addMedicationUseCaseProvider);
           result = await addUseCase(medicine: medicine, schedules: schedules);
@@ -205,25 +235,42 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
 
       result.fold(
         (failure) {
-          ref.read(crashlyticsServiceProvider).recordError(
-            failure,
-            StackTrace.current,
-            reason: _isEditing ? 'Failed to update medication' : 'Failed to add medication',
-          );
-          ref.read(medicationFormStateProvider.notifier).state = AsyncValue.error(failure, StackTrace.current);
+          ref
+              .read(crashlyticsServiceProvider)
+              .recordError(
+                failure,
+                StackTrace.current,
+                reason: _isEditing
+                    ? 'Failed to update medication'
+                    : 'Failed to add medication',
+              );
+          ref.read(medicationFormStateProvider.notifier).state =
+              AsyncValue.error(failure, StackTrace.current);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(failure.message), backgroundColor: AppColors.red),
+            SnackBar(
+              content: Text(failure.message),
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
           );
         },
         (_) async {
           final analytics = ref.read(analyticsServiceProvider);
           if (_isEditing) {
-            await analytics.logMedicationUpdated(medicine.id, medicine.type, schedules.length);
+            await analytics.logMedicationUpdated(
+              medicine.id,
+              medicine.type,
+              schedules.length,
+            );
           } else {
-            await analytics.logMedicationAdded(medicine.id, medicine.type, schedules.length);
+            await analytics.logMedicationAdded(
+              medicine.id,
+              medicine.type,
+              schedules.length,
+            );
           }
 
-          ref.read(medicationFormStateProvider.notifier).state = const AsyncValue.data(null);
+          ref.read(medicationFormStateProvider.notifier).state =
+              const AsyncValue.data(null);
           // Refresh dashboard list
           ref.invalidate(homeDosesProvider);
           ref.read(medicinesListProvider.notifier).refresh();
@@ -238,27 +285,30 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final medTypeConfigState = ref.watch(medTypeConfigProvider);
     final formState = ref.watch(medicationFormStateProvider);
     final isSaving = formState.isLoading;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(_isEditing ? 'Edit Medication' : 'Add Medication'),
-        backgroundColor: AppColors.transparent,
+        backgroundColor: Colors.transparent,
         centerTitle: true,
       ),
       body: medTypeConfigState.when(
         data: (config) {
           final typeConfig = config.getTypeConfig(_selectedType);
-          
+
           // Autofill standard units
           if (typeConfig != null) {
-            if (_selectedDosageUnit == null && typeConfig.dosageUnits.isNotEmpty) {
+            if (_selectedDosageUnit == null &&
+                typeConfig.dosageUnits.isNotEmpty) {
               _selectedDosageUnit = typeConfig.dosageUnits.first;
             }
-            if (_selectedQuantityUnit == null && typeConfig.quantityUnits.isNotEmpty) {
+            if (_selectedQuantityUnit == null &&
+                typeConfig.quantityUnits.isNotEmpty) {
               _selectedQuantityUnit = typeConfig.quantityUnits.first;
             }
           }
@@ -271,7 +321,10 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
                   StepIndicator(currentStep: _currentStep),
                   Expanded(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24.0,
+                        vertical: 8.0,
+                      ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: _buildStepContent(config, typeConfig),
@@ -283,8 +336,9 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
             ),
           );
         },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (err, stack) => Center(child: Text('Error loading configuration: $err')),
+        loading: () => Center(child: CircularProgressIndicator()),
+        error: (err, stack) =>
+            Center(child: Text('Error loading configuration: $err')),
       ),
       bottomNavigationBar: SafeArea(
         child: Padding(
@@ -302,17 +356,25 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
                               setState(() => _currentStep--);
                             },
                       style: OutlinedButton.styleFrom(
-                        side: const BorderSide(color: AppColors.accent, width: 1.5),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        side: BorderSide(
+                          color: colorScheme.secondary,
+                          width: 1.5,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
                       ),
-                      child: const Text(
+                      child: Text(
                         'Back',
-                        style: TextStyle(color: AppColors.accent, fontSize: 16),
+                        style: TextStyle(
+                          color: colorScheme.secondary,
+                          fontSize: 16,
+                        ),
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 16),
+                SizedBox(width: 16),
               ],
               Expanded(
                 child: SizedBox(
@@ -330,16 +392,20 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
                             }
                           },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accent,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      backgroundColor: colorScheme.secondary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                     ),
                     child: isSaving
-                        ? const CircularProgressIndicator(color: AppColors.white)
+                        ? CircularProgressIndicator(color: Colors.white)
                         : Text(
                             _currentStep < 2
                                 ? 'Next'
-                                : (_isEditing ? 'Save Changes' : 'Add Medication'),
-                            style: const TextStyle(color: AppColors.white, fontSize: 16),
+                                : (_isEditing
+                                      ? 'Save Changes'
+                                      : 'Add Medication'),
+                            style: TextStyle(color: Colors.white, fontSize: 16),
                           ),
                   ),
                 ),
@@ -351,27 +417,41 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
     );
   }
 
-  List<Widget> _buildStepContent(MedTypeConfig config, MedTypeUnit? typeConfig) {
+  List<Widget> _buildStepContent(
+    MedTypeConfig config,
+    MedTypeUnit? typeConfig,
+  ) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final nameFieldBg = isDark
+        ? AppColors.darkSurface.withValues(alpha: 0.6)
+        : AppColors.cardFill.withValues(alpha: 0.7);
+
     if (_currentStep == 0) {
       return [
         // Medicine Name Input
-        const Text('Medication Name', style: AppTextStyles.labelLarge),
-        const SizedBox(height: 8),
+        Text('Medication Name', style: Theme.of(context).textTheme.labelLarge),
+        SizedBox(height: 8),
         TextFormField(
           controller: _nameController,
-          validator: (value) => value == null || value.trim().isEmpty ? 'Enter medication name' : null,
+          validator: (value) => value == null || value.trim().isEmpty
+              ? 'Enter medication name'
+              : null,
           textCapitalization: TextCapitalization.sentences,
           inputFormatters: [
             LengthLimitingTextInputFormatter(50),
             FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9\s\-\+]')),
           ],
-          decoration: const InputDecoration(hintText: 'Enter name (e.g. Paracetamol)'),
+          decoration: InputDecoration(
+            hintText: 'Enter name (e.g. Paracetamol)',
+          ),
         ),
-        const SizedBox(height: 24),
+        SizedBox(height: 24),
 
         // Visual Grid of Types
-        const Text('Medication Type', style: AppTextStyles.labelLarge),
-        const SizedBox(height: 12),
+        Text('Medication Type', style: Theme.of(context).textTheme.labelLarge),
+        SizedBox(height: 12),
         TypeSelector(
           config: config,
           selectedTypeId: _selectedType,
@@ -383,43 +463,60 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
             });
           },
         ),
-        const SizedBox(height: 24),
+        SizedBox(height: 24),
 
         // Dosage & Quantity Inputs (Visually grouped in a card)
-        if ((typeConfig?.dosageEnabled ?? true) || (typeConfig?.quantityEnabled ?? true))
-          Card(
+        if ((typeConfig?.dosageEnabled ?? true) ||
+            (typeConfig?.quantityEnabled ?? true))
+          Container(
+            decoration: BoxDecoration(
+              color: nameFieldBg,
+              borderRadius: BorderRadius.circular(16),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
                   // Dosage Row
                   if (typeConfig?.dosageEnabled ?? true) ...[
-                    const Align(
+                    Align(
                       alignment: Alignment.centerLeft,
-                      child: Text('Dosage', style: AppTextStyles.labelLarge),
+                      child: Text(
+                        'Dosage',
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     Row(
                       children: [
                         Expanded(
                           flex: 5,
                           child: TextFormField(
                             controller: _dosageValueController,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
                             inputFormatters: [
-                              FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                              FilteringTextInputFormatter.allow(
+                                RegExp(r'[0-9.]'),
+                              ),
                             ],
-                            decoration: const InputDecoration(hintText: 'Value'),
+                            decoration: InputDecoration(hintText: 'Value'),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         Expanded(
                           flex: 4,
                           child: DropdownButtonFormField<String>(
                             isExpanded: true,
                             value: _selectedDosageUnit,
-                            items: (typeConfig?.dosageUnits ?? ['mg']).map((unit) {
-                              return DropdownMenuItem(value: unit, child: Text(unit));
+                            items: (typeConfig?.dosageUnits ?? ['mg']).map((
+                              unit,
+                            ) {
+                              return DropdownMenuItem(
+                                value: unit,
+                                child: Text(unit),
+                              );
                             }).toList(),
                             onChanged: (val) {
                               setState(() => _selectedDosageUnit = val);
@@ -429,36 +526,48 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
                       ],
                     ),
                     if (typeConfig?.quantityEnabled ?? true)
-                      const SizedBox(height: 20),
+                      SizedBox(height: 20),
                   ],
                   // Quantity Row
                   if (typeConfig?.quantityEnabled ?? true) ...[
-                    const Align(
+                    Align(
                       alignment: Alignment.centerLeft,
-                      child: Text('Quantity', style: AppTextStyles.labelLarge),
+                      child: Text(
+                        'Quantity',
+                        style: Theme.of(context).textTheme.labelLarge,
+                      ),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     Row(
                       children: [
                         Expanded(
                           flex: 5,
                           child: TextFormField(
                             controller: _quantityValueController,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
                             inputFormatters: [
-                              FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                              FilteringTextInputFormatter.allow(
+                                RegExp(r'[0-9.]'),
+                              ),
                             ],
-                            decoration: const InputDecoration(hintText: 'Value'),
+                            decoration: InputDecoration(hintText: 'Value'),
                           ),
                         ),
-                        const SizedBox(width: 12),
+                        SizedBox(width: 12),
                         Expanded(
                           flex: 4,
                           child: DropdownButtonFormField<String>(
                             isExpanded: true,
                             value: _selectedQuantityUnit,
-                            items: (typeConfig?.quantityUnits ?? ['tab']).map((unit) {
-                              return DropdownMenuItem(value: unit, child: Text(unit));
+                            items: (typeConfig?.quantityUnits ?? ['tab']).map((
+                              unit,
+                            ) {
+                              return DropdownMenuItem(
+                                value: unit,
+                                child: Text(unit),
+                              );
                             }).toList(),
                             onChanged: (val) {
                               setState(() => _selectedQuantityUnit = val);
@@ -472,11 +581,62 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
               ),
             ),
           ),
-        const SizedBox(height: 24),
+        SizedBox(height: 24),
       ];
     } else if (_currentStep == 1) {
       return [
-        // Frequency Dropdown Selector
+        // Top Summary Pill
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: nameFieldBg,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                _nameController.text.trim().isEmpty
+                    ? 'Medication'
+                    : _nameController.text.trim(),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: colorScheme.onSurface,
+                ),
+              ),
+              Text(
+                '  ·  ',
+                style: TextStyle(
+                  color: colorScheme.onSurface.withValues(alpha: 0.5),
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                typeConfig?.displayName ??
+                    (_selectedType.isNotEmpty
+                        ? _selectedType[0].toUpperCase() + _selectedType.substring(1)
+                        : ''),
+                style: TextStyle(
+                  color: colorScheme.onSurface.withValues(alpha: 0.8),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+
+        // Frequency Grid Selector (2x2 Grid)
         FrequencySelector(
           initialFrequencyOption: _frequencyOption,
           initialCustomCount: _frequencyCount,
@@ -506,76 +666,260 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
       ];
     } else {
       return [
-        // Duration Picker: Start & End Date
-        const Text('Duration', style: AppTextStyles.labelLarge),
-        const SizedBox(height: 12),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                // Start Date
-                Row(
+        // Top Summary Pill
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: nameFieldBg,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 14,
+                height: 14,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  '${_nameController.text.trim().isEmpty ? 'Medication' : _nameController.text.trim()}  ·  ${typeConfig?.displayName ?? (_selectedType.isNotEmpty ? _selectedType[0].toUpperCase() + _selectedType.substring(1) : '')}  ·  $_frequencyOption',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: colorScheme.onSurface,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+
+        // Duration Section
+        Text(
+          'Duration',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: colorScheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.all(16.0),
+          decoration: BoxDecoration(
+            color: nameFieldBg,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            children: [
+              // Start Date
+              InkWell(
+                onTap: () async {
+                  final picked = await showDatePicker(
+                    context: context,
+                    initialDate: _startDate,
+                    firstDate: DateTime(2026),
+                    lastDate: DateTime(2030),
+                  );
+                  if (picked != null) {
+                    setState(() => _startDate = picked);
+                  }
+                },
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text('Start Date', style: AppTextStyles.bodyMedium),
-                    TextButton(
-                      onPressed: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: _startDate,
-                          firstDate: DateTime(2026),
-                          lastDate: DateTime(2030),
-                        );
-                        if (picked != null) {
-                          setState(() => _startDate = picked);
-                        }
-                      },
-                      child: Text(DateFormat('dd-MMM-yyyy').format(_startDate)),
+                    Text(
+                      'Start Date',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        Text(
+                          DateFormat('dd/MM/yyyy').format(_startDate),
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: colorScheme.secondary,
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Icon(
+                          Icons.calendar_today_outlined,
+                          size: 16,
+                          color: colorScheme.secondary,
+                        ),
+                      ],
                     ),
                   ],
                 ),
-                const Divider(height: 16),
-                // Continuous Toggle
-                CheckboxListTile(
-                  title: const Text('Continuous (No End Date)', style: AppTextStyles.bodyMedium),
-                  value: _isContinuous,
-                  onChanged: (val) {
-                    if (val != null) {
-                      setState(() => _isContinuous = val);
+              ),
+              const SizedBox(height: 12),
+              // Continuous Toggle
+              InkWell(
+                onTap: () => setState(() => _isContinuous = !_isContinuous),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Continuous (No End Date)',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                    Checkbox(
+                      value: _isContinuous,
+                      activeColor: colorScheme.secondary,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() => _isContinuous = val);
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              // End Date Picker if not continuous
+              if (!_isContinuous) ...[
+                const SizedBox(height: 12),
+                InkWell(
+                  onTap: () async {
+                    final picked = await showDatePicker(
+                      context: context,
+                      initialDate:
+                          _endDate ?? _startDate.add(const Duration(days: 7)),
+                      firstDate: _startDate,
+                      lastDate: DateTime(2030),
+                    );
+                    if (picked != null) {
+                      setState(() => _endDate = picked);
                     }
                   },
-                  controlAffinity: ListTileControlAffinity.trailing,
-                  contentPadding: EdgeInsets.zero,
-                ),
-                // End Date Picker if not continuous
-                if (!_isContinuous) ...[
-                  const Divider(height: 16),
-                  Row(
+                  child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('End Date', style: AppTextStyles.bodyMedium),
-                      TextButton(
-                        onPressed: () async {
-                          final picked = await showDatePicker(
-                            context: context,
-                            initialDate: _endDate ?? _startDate.add(const Duration(days: 7)),
-                            firstDate: _startDate,
-                            lastDate: DateTime(2030),
-                          );
-                          if (picked != null) {
-                            setState(() => _endDate = picked);
-                          }
-                        },
-                        child: Text(_endDate != null
-                            ? DateFormat('dd-MMM-yyyy').format(_endDate!)
-                            : 'Select Date'),
+                      Text(
+                        'End Date',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: colorScheme.onSurface,
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          Text(
+                            _endDate != null
+                                ? DateFormat('dd/MM/yyyy').format(_endDate!)
+                                : 'Select Date',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: colorScheme.secondary,
+                              fontSize: 14,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Icon(
+                            Icons.calendar_today_outlined,
+                            size: 16,
+                            color: colorScheme.secondary,
+                          ),
+                        ],
                       ),
                     ],
                   ),
-                ],
+                ),
               ],
-            ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 24),
+
+        // Review Section
+        Text(
+          'Review',
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: colorScheme.onSurface,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.all(16.0),
+          decoration: BoxDecoration(
+            color: nameFieldBg,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Column(
+            children: [
+              _buildReviewRow(
+                'Medication',
+                _nameController.text.trim().isEmpty
+                    ? '—'
+                    : _nameController.text.trim(),
+              ),
+              _buildReviewDivider(isDark),
+              _buildReviewRow(
+                'Type',
+                typeConfig?.displayName ??
+                    (_selectedType.isNotEmpty
+                        ? _selectedType[0].toUpperCase() +
+                            _selectedType.substring(1)
+                        : '—'),
+              ),
+              if ((typeConfig?.dosageEnabled ?? true) &&
+                  _dosageValueController.text.trim().isNotEmpty) ...[
+                _buildReviewDivider(isDark),
+                _buildReviewRow(
+                  'Dosage',
+                  '${_dosageValueController.text.trim()} ${_selectedDosageUnit ?? 'mg'}',
+                ),
+              ],
+              if ((typeConfig?.quantityEnabled ?? true) &&
+                  _quantityValueController.text.trim().isNotEmpty) ...[
+                _buildReviewDivider(isDark),
+                _buildReviewRow(
+                  'Quantity',
+                  '${_quantityValueController.text.trim()} ${_selectedQuantityUnit ?? 'tab'}',
+                ),
+              ],
+              _buildReviewDivider(isDark),
+              _buildReviewRow('Frequency', _frequencyOption),
+              _buildReviewDivider(isDark),
+              _buildReviewRow(
+                'Schedule',
+                _selectedTimes
+                    .map((t) => DateTimeUtils.formatTimeString(t))
+                    .join(', '),
+              ),
+              _buildReviewDivider(isDark),
+              _buildReviewRow(
+                'Start Date',
+                DateFormat('dd-MMM-yyyy').format(_startDate),
+              ),
+              _buildReviewDivider(isDark),
+              _buildReviewRow(
+                'Ends',
+                _isContinuous
+                    ? 'Continuous'
+                    : (_endDate != null
+                        ? DateFormat('dd-MMM-yyyy').format(_endDate!)
+                        : '—'),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 24),
@@ -583,10 +927,15 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
         // Active Toggle if in editing mode
         if (_isEditing) ...[
           SwitchListTile(
-            title: const Text('Active Status', style: AppTextStyles.labelLarge),
-            subtitle: const Text('Inactive medicines do not appear on dashboard schedule list.'),
+            title: Text(
+              'Active Status',
+              style: theme.textTheme.labelLarge,
+            ),
+            subtitle: Text(
+              'Inactive medicines do not appear on dashboard schedule list.',
+            ),
             value: _isActive,
-            activeColor: AppColors.accent,
+            activeColor: colorScheme.secondary,
             onChanged: (val) {
               setState(() => _isActive = val);
             },
@@ -596,6 +945,46 @@ class _AddMedicationScreenState extends ConsumerState<AddMedicationScreen> {
       ];
     }
   }
+
+  Widget _buildReviewRow(String label, String value) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+              color: colorScheme.onSurface.withValues(alpha: 0.6),
+              fontWeight: FontWeight.w500,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.end,
+              style: TextStyle(
+                color: colorScheme.onSurface,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReviewDivider(bool isDark) {
+    return Divider(
+      height: 16,
+      thickness: 0.8,
+      color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.06),
+    );
+  }
 }
 
 class StepIndicator extends StatelessWidget {
@@ -603,57 +992,74 @@ class StepIndicator extends StatelessWidget {
 
   const StepIndicator({super.key, required this.currentStep});
 
+  Widget _buildStepCircle(BuildContext context, int index) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isActive = index <= currentStep;
+    final isCurrent = index == currentStep;
+
+    return Container(
+      width: 36,
+      height: 36,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: isCurrent
+            ? colorScheme.secondary
+            : isActive
+                ? colorScheme.secondary.withValues(alpha: 0.6)
+                : colorScheme.surface,
+        border: Border.all(
+          color: isCurrent
+              ? colorScheme.secondary
+              : isActive
+                  ? colorScheme.secondary.withValues(alpha: 0.6)
+                  : colorScheme.onSurface.withValues(alpha: 0.2),
+          width: 2,
+        ),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        '${index + 1}',
+        style: TextStyle(
+          color: isActive
+              ? Colors.white
+              : colorScheme.onSurface.withValues(alpha: 0.5),
+          fontWeight: FontWeight.bold,
+          fontSize: 14,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConnectingLine(BuildContext context, int index) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isPassed = index < currentStep;
+
+    return Expanded(
+      child: Container(
+        height: 3,
+        margin: const EdgeInsets.symmetric(horizontal: 4),
+        decoration: BoxDecoration(
+          color: isPassed
+              ? colorScheme.secondary
+              : colorScheme.onSurface.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(1.5),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 20.0),
+      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(3, (index) {
-          final isActive = index <= currentStep;
-          final isCurrent = index == currentStep;
-          return Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: isCurrent
-                      ? AppColors.accent
-                      : isActive
-                          ? AppColors.accent.withOpacity(0.6)
-                          : AppColors.cardFill,
-                  border: Border.all(
-                    color: isCurrent
-                        ? AppColors.accent
-                        : isActive
-                            ? AppColors.accent.withOpacity(0.6)
-                            : AppColors.textSecondary.withOpacity(0.3),
-                    width: 2,
-                  ),
-                ),
-                alignment: Alignment.center,
-                child: Text(
-                  '${index + 1}',
-                  style: TextStyle(
-                    color: isActive ? AppColors.white : AppColors.textSecondary,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-              if (index < 2)
-                Container(
-                  width: 60,
-                  height: 3,
-                  color: index < currentStep
-                      ? AppColors.accent
-                      : AppColors.textSecondary.withOpacity(0.2),
-                ),
-            ],
-          );
-        }),
+        children: [
+          _buildStepCircle(context, 0),
+          _buildConnectingLine(context, 0),
+          _buildStepCircle(context, 1),
+          _buildConnectingLine(context, 1),
+          _buildStepCircle(context, 2),
+        ],
       ),
     );
   }

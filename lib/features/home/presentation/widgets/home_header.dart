@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
 import '../../../profiles/presentation/providers/active_profile_provider.dart';
 import '../providers/home_provider.dart';
 import 'full_calendar_dialog.dart';
@@ -30,6 +28,8 @@ class HomeHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final activeProfile = ref.watch(activeProfileProvider);
     final selectedDate = ref.watch(selectedDateProvider);
     final title = _getHeaderTitle(selectedDate);
@@ -52,15 +52,15 @@ class HomeHeader extends ConsumerWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                 decoration: BoxDecoration(
-                  color: AppColors.cardFill,
+                  color: colorScheme.surface,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   activeProfile?.profileName ?? 'User',
                   overflow: TextOverflow.ellipsis,
                   maxLines: 1,
-                  style: AppTextStyles.labelLarge.copyWith(
-                    color: AppColors.accent,
+                  style: textTheme.labelLarge?.copyWith(
+                    color: colorScheme.secondary,
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
@@ -78,7 +78,7 @@ class HomeHeader extends ConsumerWidget {
                 child: Text(
                   title,
                   textAlign: TextAlign.center,
-                  style: AppTextStyles.titleLarge.copyWith(
+                  style: textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.w600,
                     fontSize: 22,
                   ),
@@ -102,13 +102,13 @@ class HomeHeader extends ConsumerWidget {
             child: Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: AppColors.cardFill.withOpacity(0.5),
+                color: colorScheme.surface.withOpacity(0.5),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.calendar_today_outlined,
                 size: 20,
-                color: AppColors.accent,
+                color: colorScheme.secondary,
               ),
             ),
           ),

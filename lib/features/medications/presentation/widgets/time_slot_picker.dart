@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/date_time_utils.dart';
+import '../../../../core/theme/app_colors.dart';
 
 class TimeSlotPicker extends StatelessWidget {
   final int slotCount;
@@ -47,6 +46,13 @@ class TimeSlotPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final cardBg = isDark
+        ? AppColors.darkSurface.withValues(alpha: 0.6)
+        : AppColors.cardFill.withValues(alpha: 0.7);
+
     // Keep internal selectedTimes sized exactly to slotCount
     final times = List<String>.generate(slotCount, (i) {
       if (i < selectedTimes.length) {
@@ -61,15 +67,14 @@ class TimeSlotPicker extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'Dose Schedule Times',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: AppColors.textPrimary,
+          style: theme.textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: colorScheme.onSurface,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 12),
         ListView.separated(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -81,35 +86,39 @@ class TimeSlotPicker extends StatelessWidget {
 
             return InkWell(
               onTap: () => _selectTime(context, index),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 decoration: BoxDecoration(
-                  color: AppColors.cardFill.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(12),
+                  color: cardBg,
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       'Time Slot ${index + 1}',
-                      style: AppTextStyles.labelLarge.copyWith(
-                        color: AppColors.textPrimary,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                        color: colorScheme.onSurface,
                       ),
                     ),
                     Row(
                       children: [
                         Text(
                           displayTime,
-                          style: AppTextStyles.bodyMedium.copyWith(
-                            color: AppColors.accent,
-                            fontWeight: FontWeight.w600,
+                          style: TextStyle(
+                            color: colorScheme.secondary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        const Icon(
-                          Icons.arrow_drop_down,
-                          color: AppColors.accent,
+                        const SizedBox(width: 6),
+                        Icon(
+                          Icons.access_time_rounded,
+                          size: 18,
+                          color: colorScheme.secondary,
                         ),
                       ],
                     ),

@@ -122,6 +122,7 @@ class DbHelper {
         reminders_enabled $integerType,
         sound_enabled $integerType,
         grace_period_minutes $integerType,
+        dark_mode_enabled $integerType DEFAULT 0,
         updated_at $integerType,
         is_dirty $integerType,
         FOREIGN KEY (profile_id) REFERENCES ${AppConstants.tableProfiles} (id) ON DELETE CASCADE

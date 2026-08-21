@@ -2,14 +2,14 @@ class MedicineAdherence {
   final String medicineId;
   final String medicineName;
   final String type;
-  final double adherenceRate; // percentage 0-100, or null if no logs
+  final double? adherenceRate; // percentage 0-100, or null if no logs
   final List<DoseLog> logs;
 
   const MedicineAdherence({
     required this.medicineId,
     required this.medicineName,
     required this.type,
-    required this.adherenceRate,
+    this.adherenceRate,
     required this.logs,
   });
 }

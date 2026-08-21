@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timezone/timezone.dart' as tz;
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
 import '../providers/settings_provider.dart';
 import '../services/notification_service.dart';
 import '../services/reminder_scheduler.dart';
@@ -14,12 +12,13 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final settingsState = ref.watch(settingsStateProvider);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Settings'),
-        backgroundColor: AppColors.transparent,
+        backgroundColor: Colors.transparent,
         centerTitle: true,
       ),
       body: settingsState.when(
@@ -28,29 +27,54 @@ class SettingsScreen extends ConsumerWidget {
             child: ListView(
               padding: const EdgeInsets.all(24.0),
               children: [
-                // Reminders Section Header
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-                  child: Text('Notifications', style: AppTextStyles.titleSmall),
+                // ── Appearance Section ──
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+                  child: Text('Appearance', style: theme.textTheme.titleSmall),
+                ),
+                Card(
+                  child: SwitchListTile(
+                    title: Text('Dark Mode', style: theme.textTheme.labelLarge),
+                    subtitle: const Text('Switch to a rich dark color scheme.'),
+                    value: settings.darkModeEnabled,
+                    secondary: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 300),
+                      transitionBuilder: (child, animation) =>
+                          RotationTransition(turns: animation, child: child),
+                      child: Icon(
+                        settings.darkModeEnabled ? Icons.dark_mode : Icons.light_mode,
+                        key: ValueKey(settings.darkModeEnabled),
+                        color: colorScheme.secondary,
+                      ),
+                    ),
+                    onChanged: (val) {
+                      ref.read(settingsStateProvider.notifier).updateDarkMode(val);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 28),
+
+                // ── Notifications Section ──
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+                  child: Text('Notifications', style: theme.textTheme.titleSmall),
                 ),
                 Card(
                   child: Column(
                     children: [
                       SwitchListTile(
-                        title: const Text('Dose Reminders', style: AppTextStyles.labelLarge),
+                        title: Text('Dose Reminders', style: theme.textTheme.labelLarge),
                         subtitle: const Text('Get notified exactly when a medication is scheduled.'),
                         value: settings.remindersEnabled,
-                        activeColor: AppColors.accent,
                         onChanged: (val) {
                           ref.read(settingsStateProvider.notifier).updateReminders(val);
                         },
                       ),
-                      const Divider(height: 1, indent: 16, endIndent: 16),
+                      Divider(height: 1, indent: 16, endIndent: 16, color: theme.dividerColor),
                       SwitchListTile(
-                        title: const Text('Reminder Sound', style: AppTextStyles.labelLarge),
+                        title: Text('Reminder Sound', style: theme.textTheme.labelLarge),
                         subtitle: const Text('Play sound notifications for dose alerts.'),
                         value: settings.soundEnabled,
-                        activeColor: AppColors.accent,
                         // Only allow sound toggle if reminders are turned on
                         onChanged: settings.remindersEnabled
                             ? (val) {
@@ -63,10 +87,10 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 28),
 
-                // Adherence Rules Section
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-                  child: Text('Adherence Rules', style: AppTextStyles.titleSmall),
+                // ── Adherence Rules Section ──
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+                  child: Text('Adherence Rules', style: theme.textTheme.titleSmall),
                 ),
                 Card(
                   child: Padding(
@@ -74,14 +98,14 @@ class SettingsScreen extends ConsumerWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
+                        Text(
                           'Missed Dose Grace Period',
-                          style: AppTextStyles.labelLarge,
+                          style: theme.textTheme.labelLarge,
                         ),
                         const SizedBox(height: 4),
-                        const Text(
+                        Text(
                           'Unlogged doses are marked "skipped" automatically after this time expires.',
-                          style: AppTextStyles.bodySmall,
+                          style: theme.textTheme.bodySmall,
                         ),
                         const SizedBox(height: 16),
                         DropdownButtonFormField<int>(
@@ -107,10 +131,10 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 28),
 
-                // Info Section
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-                  child: Text('About App', style: AppTextStyles.titleSmall),
+                // ── About Section ──
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+                  child: Text('About App', style: theme.textTheme.titleSmall),
                 ),
                 Card(
                   child: Padding(
@@ -119,17 +143,17 @@ class SettingsScreen extends ConsumerWidget {
                       children: [
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: const [
-                            Text('App Version', style: AppTextStyles.bodyMedium),
-                            Text('2.0.0', style: TextStyle(color: AppColors.textSecondary)),
+                          children: [
+                            Text('App Version', style: theme.textTheme.bodyMedium),
+                            Text('2.0.0', style: TextStyle(color: colorScheme.onSurface.withOpacity(0.6))),
                           ],
                         ),
-                        const Divider(height: 24),
+                        Divider(height: 24, color: theme.dividerColor),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: const [
-                            Text('Developer', style: AppTextStyles.bodyMedium),
-                            Text('Google DeepMind', style: TextStyle(color: AppColors.textSecondary)),
+                          children: [
+                            Text('Developer', style: theme.textTheme.bodyMedium),
+                            Text('Google DeepMind', style: TextStyle(color: colorScheme.onSurface.withOpacity(0.6))),
                           ],
                         ),
                       ],
@@ -138,10 +162,10 @@ class SettingsScreen extends ConsumerWidget {
                 ),
                 const SizedBox(height: 28),
 
-                // Diagnostics Section
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
-                  child: Text('Notification Diagnostics', style: AppTextStyles.titleSmall),
+                // ── Diagnostics Section ──
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+                  child: Text('Notification Diagnostics', style: theme.textTheme.titleSmall),
                 ),
                 Card(
                   child: Padding(
@@ -152,29 +176,29 @@ class SettingsScreen extends ConsumerWidget {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Active Timezone', style: AppTextStyles.labelLarge),
+                            Text('Active Timezone', style: theme.textTheme.labelLarge),
                             Text(
                               tz.local.name,
-                              style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.bold),
+                              style: TextStyle(color: colorScheme.secondary, fontWeight: FontWeight.bold),
                             ),
                           ],
                         ),
-                        const Divider(height: 24),
+                        Divider(height: 24, color: theme.dividerColor),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('App Local Time', style: AppTextStyles.labelLarge),
+                            Text('App Local Time', style: theme.textTheme.labelLarge),
                             Text(
                               DateTime.now().toString().split('.').first,
-                              style: const TextStyle(color: AppColors.textSecondary),
+                              style: TextStyle(color: colorScheme.onSurface.withOpacity(0.6)),
                             ),
                           ],
                         ),
-                        const Divider(height: 24),
+                        Divider(height: 24, color: theme.dividerColor),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Exact Alarms Granted', style: AppTextStyles.labelLarge),
+                            Text('Exact Alarms Granted', style: theme.textTheme.labelLarge),
                             FutureBuilder<bool>(
                               future: NotificationService.instance.checkExactAlarmPermission(),
                               builder: (context, snapshot) {
@@ -190,8 +214,8 @@ class SettingsScreen extends ConsumerWidget {
                             ),
                           ],
                         ),
-                        const Divider(height: 24),
-                        const Text('Pending Scheduled Alarms:', style: AppTextStyles.labelLarge),
+                        Divider(height: 24, color: theme.dividerColor),
+                        Text('Pending Scheduled Alarms:', style: theme.textTheme.labelLarge),
                         const SizedBox(height: 8),
                         FutureBuilder<List<PendingNotificationRequest>>(
                           future: NotificationService.instance.getPendingReminders(),
@@ -204,18 +228,21 @@ class SettingsScreen extends ConsumerWidget {
                             }
                             final list = snapshot.data ?? [];
                             if (list.isEmpty) {
-                              return const Text(
+                              return Text(
                                 'No pending scheduled notifications in OS.',
-                                style: TextStyle(color: AppColors.textSecondary, fontStyle: FontStyle.italic),
+                                style: TextStyle(
+                                  color: colorScheme.onSurface.withOpacity(0.5),
+                                  fontStyle: FontStyle.italic,
+                                ),
                               );
                             }
                             return Column(
                               children: list.map((req) {
                                 return ListTile(
                                   contentPadding: EdgeInsets.zero,
-                                  leading: const Icon(Icons.alarm, color: AppColors.accent),
-                                  title: Text(req.title ?? 'Dose Reminder', style: AppTextStyles.bodyMedium),
-                                  subtitle: Text('${req.body}\nID: ${req.id}', style: AppTextStyles.bodySmall),
+                                  leading: Icon(Icons.alarm, color: colorScheme.secondary),
+                                  title: Text(req.title ?? 'Dose Reminder', style: theme.textTheme.bodyMedium),
+                                  subtitle: Text('${req.body}\nID: ${req.id}', style: theme.textTheme.bodySmall),
                                 );
                               }).toList(),
                             );
@@ -245,8 +272,8 @@ class SettingsScreen extends ConsumerWidget {
                                 icon: const Icon(Icons.notification_important),
                                 label: const Text('Test Alert (5s)'),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.accent.withOpacity(0.2),
-                                  foregroundColor: AppColors.accent,
+                                  backgroundColor: colorScheme.secondary.withOpacity(0.2),
+                                  foregroundColor: colorScheme.secondary,
                                 ),
                                 onPressed: () async {
                                   ScaffoldMessenger.of(context).showSnackBar(

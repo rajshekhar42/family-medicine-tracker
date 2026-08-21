@@ -5,7 +5,7 @@
 set -e
 
 APP_PACKAGE="org.medimitra.family_medicine_tracker"
-APK_PATH="build/app/outputs/flutter-apk/app-debug.apk"
+APK_PATH="../../build/app/outputs/flutter-apk/app-debug.apk"
 
 echo "============================================================"
 echo "🛠️  1. Compiling latest debug APK..."

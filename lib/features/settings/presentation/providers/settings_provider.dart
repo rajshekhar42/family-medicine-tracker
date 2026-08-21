@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/foundation.dart';
 import '../../../../core/utils/db_helper.dart';
@@ -47,6 +48,16 @@ final saveSettingsUseCaseProvider = Provider<SaveSettings>((ref) {
 // 2. Settings State Manager
 final settingsStateProvider = AsyncNotifierProvider<SettingsNotifier, AppSettings>(() {
   return SettingsNotifier();
+});
+
+// 3. Theme Mode Provider — derives ThemeMode from settings
+final themeModeProvider = Provider<ThemeMode>((ref) {
+  final settingsAsync = ref.watch(settingsStateProvider);
+  return settingsAsync.when(
+    data: (settings) => settings.darkModeEnabled ? ThemeMode.dark : ThemeMode.light,
+    loading: () => ThemeMode.light,
+    error: (_, __) => ThemeMode.light,
+  );
 });
 
 class SettingsNotifier extends AsyncNotifier<AppSettings> {
@@ -100,5 +111,16 @@ class SettingsNotifier extends AsyncNotifier<AppSettings> {
     final saveSettings = ref.read(saveSettingsUseCaseProvider);
     await saveSettings(settings: updated);
     await ref.read(reminderSchedulerProvider).rescheduleAll();
+  }
+
+  Future<void> updateDarkMode(bool enabled) async {
+    final current = state.valueOrNull;
+    if (current == null) return;
+
+    final updated = current.copyWith(darkModeEnabled: enabled);
+    state = AsyncValue.data(updated);
+
+    final saveSettings = ref.read(saveSettingsUseCaseProvider);
+    await saveSettings(settings: updated);
   }
 }

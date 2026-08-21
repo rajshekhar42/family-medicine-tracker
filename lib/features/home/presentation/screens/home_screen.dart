@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../domain/entities/scheduled_dose.dart';
 import '../providers/home_provider.dart';
@@ -70,16 +68,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final dosesState = ref.watch(homeDosesProvider);
     final activeProfile = ref.watch(activeProfileProvider);
     final isReadOnly = activeProfile != null && !activeProfile.isOwner;
     final authState = ref.watch(authProvider);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       
       // Profile and navigation menu Drawer
-      drawer: const ProfileDrawer(),
+      drawer: ProfileDrawer(),
       
       body: SafeArea(
         child: Column(
@@ -102,8 +101,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: [
-                              AppColors.accent.withOpacity(0.85),
-                              AppColors.accent.withOpacity(0.95),
+                              colorScheme.secondary.withOpacity(0.85),
+                              colorScheme.secondary.withOpacity(0.95),
                             ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
@@ -111,7 +110,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.accent.withOpacity(0.3),
+                              color: colorScheme.secondary.withOpacity(0.3),
                               blurRadius: 8,
                               offset: const Offset(0, 4),
                             ),
@@ -124,13 +123,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                             children: [
                               Row(
                                 children: [
-                                  const Icon(Icons.people_alt_outlined, color: AppColors.white, size: 22),
+                                  Icon(Icons.people_alt_outlined, color: colorScheme.onSecondary, size: 22),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
                                       'Connection Request',
-                                      style: AppTextStyles.labelLarge.copyWith(
-                                        color: AppColors.white,
+                                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                        color: colorScheme.onSecondary,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
@@ -140,7 +139,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                               const SizedBox(height: 8),
                               Text(
                                 'Accept pairing request from ${request['display_name'] ?? 'Caretaker'} (Code: ${request['caretaker_app_code']})?',
-                                style: AppTextStyles.bodyMedium.copyWith(color: AppColors.white.withOpacity(0.9)),
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: colorScheme.onSecondary.withOpacity(0.9),
+                                ),
                               ),
                               const SizedBox(height: 12),
                               Row(
@@ -148,11 +149,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                                 children: [
                                   TextButton(
                                     style: TextButton.styleFrom(
-                                      foregroundColor: AppColors.white,
+                                      foregroundColor: colorScheme.onSecondary,
                                       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(8),
-                                        side: BorderSide(color: AppColors.white.withOpacity(0.5)),
+                                        side: BorderSide(color: colorScheme.onSecondary.withOpacity(0.5)),
                                       ),
                                     ),
                                     onPressed: () async {
@@ -169,8 +170,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                                   const SizedBox(width: 12),
                                   ElevatedButton(
                                     style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppColors.white,
-                                      foregroundColor: AppColors.accent,
+                                      backgroundColor: colorScheme.onSecondary,
+                                      foregroundColor: colorScheme.secondary,
                                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(8),
@@ -247,9 +248,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                     },
                   );
                 },
-                loading: () => const Center(
+                loading: () => Center(
                   child: CircularProgressIndicator(
-                    color: AppColors.accent,
+                    color: colorScheme.secondary,
                   ),
                 ),
                 error: (error, stackTrace) => Center(
@@ -258,7 +259,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                     child: Text(
                       'Failed to load schedule: $error',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: AppColors.red),
+                      style: TextStyle(color: colorScheme.error),
                     ),
                   ),
                 ),

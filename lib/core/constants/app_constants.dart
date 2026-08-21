@@ -3,7 +3,7 @@ class AppConstants {
 
   // Database
   static const String dbName = 'medicine_tracker.db';
-  static const int dbVersion = 3;
+  static const int dbVersion = 4;
 
   // Tables
   static const String tableProfiles = 'profiles';

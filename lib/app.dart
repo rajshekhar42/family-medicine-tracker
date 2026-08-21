@@ -6,6 +6,7 @@ import 'package:firebase_analytics/firebase_analytics.dart';
 import 'core/bootstrap/app_bootstrapper.dart';
 import 'core/theme/app_theme.dart';
 import 'core/constants/app_constants.dart';
+import 'features/settings/presentation/providers/settings_provider.dart';
 
 import 'features/medications/presentation/screens/add_medication_screen.dart';
 import 'features/medications/presentation/screens/medicines_list_screen.dart';
@@ -72,7 +73,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppConstants.routeAddMedication,
-        builder: (context, state) => const AddMedicationScreen(),
+        builder: (context, state) => AddMedicationScreen(),
       ),
       GoRoute(
         path: AppConstants.routeEditMedication,
@@ -87,7 +88,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: AppConstants.routeHistory,
-        builder: (context, state) => const HistoryScreen(),
+        builder: (context, state) => HistoryScreen(),
       ),
       GoRoute(
         path: AppConstants.routeSettings,
@@ -172,10 +173,13 @@ class _MyAppState extends ConsumerState<MyApp> with WidgetsBindingObserver {
     });
 
     final router = ref.watch(routerProvider);
+    final themeMode = ref.watch(themeModeProvider);
 
     return MaterialApp.router(
       title: 'FamilyMediCare',
       theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeMode,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
     );

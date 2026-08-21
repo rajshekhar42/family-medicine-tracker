@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
 
 class EmptyState extends StatelessWidget {
   const EmptyState({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 60.0),
@@ -14,9 +15,9 @@ class EmptyState extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 48),
           decoration: BoxDecoration(
-            color: AppColors.cardFill.withOpacity(0.4),
+            color: colorScheme.surface.withOpacity(0.4),
             borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: AppColors.cardFill.withOpacity(0.3)),
+            border: Border.all(color: colorScheme.onSurface.withOpacity(0.06)),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -26,33 +27,31 @@ class EmptyState extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: AppColors.white,
+                  color: colorScheme.surface,
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.receipt_long_outlined,
                   size: 40,
-                  color: AppColors.accent,
+                  color: colorScheme.secondary,
                 ),
               ),
               const SizedBox(height: 24),
               
-              const Text(
+              Text(
                 'No medications for today',
-                style: TextStyle(
+                style: textTheme.titleSmall?.copyWith(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
                 ),
               ),
               const SizedBox(height: 10),
               
-              const Text(
+              Text(
                 'Tap the plus button below to add a medicine to your schedule.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: AppColors.textSecondary,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurface.withOpacity(0.5),
                   height: 1.4,
                 ),
               ),

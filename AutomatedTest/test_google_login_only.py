@@ -16,7 +16,13 @@ def launch_app(device_id):
 
 def complete_onboarding_if_needed(device_id, profile_name, is_caretaker=False):
     onboarding = OnboardingPage(device_id)
-    if find_element(device_id, "Enter name") or find_element(device_id, "Create Profile"):
+    if (
+        find_element(device_id, "Create profile")
+        or find_element(device_id, "Create Profile")
+        or find_element(device_id, "Who are we tracking for")
+        or find_element(device_id, "e.g. Ram")
+        or find_element(device_id, "Enter name")
+    ):
         print(f"[{device_id}] Onboarding active. Completing for '{profile_name}'...")
         onboarding.enter_profile_name(profile_name)
         onboarding.select_profile_type(is_caretaker=is_caretaker)
@@ -95,14 +101,7 @@ def test_login_logout_relogin_sync():
     lap(f"Pre-logout medicine '{pre_med}' synced")
 
     # 4. Parent Logout & Relogin
-    parent_home.open_drawer()
-    sign_out_btn = find_element(parent_id, "Sign Out")
-    if sign_out_btn:
-        tap(parent_id, sign_out_btn[0], sign_out_btn[1])
-    else:
-        tap(parent_id, 660, 2210)
-    time.sleep(2)
-    parent_home.close_drawer()
+    parent_home.sign_out()
     lap("Parent signed out")
 
     parent_home.open_drawer()

@@ -550,14 +550,7 @@ def main():
         parent_home.open_drawer()
         parent_app_code_before = parent_home.get_app_code()
         print(f"[{parent_id}] Parent App Code before logout: {parent_app_code_before}")
-        sign_out_btn = find_element(parent_id, "Sign Out")
-        if sign_out_btn:
-            tap(parent_id, sign_out_btn[0], sign_out_btn[1])
-        else:
-            tap(parent_id, 750, 750)
-        time.sleep(3)
-        parent_home.close_drawer()
-        time.sleep(2)
+        parent_home.sign_out()
         dismiss_permission_dialogs(parent_id)
 
 
@@ -617,14 +610,8 @@ def main():
         caretaker_home.open_drawer()
         caretaker_app_code_before = caretaker_home.get_app_code()
         print(f"[{caretaker_id}] Caretaker App Code before logout: {caretaker_app_code_before}")
-        sign_out_btn = find_element(caretaker_id, "Sign Out")
-        if sign_out_btn:
-            tap(caretaker_id, sign_out_btn[0], sign_out_btn[1])
-        else:
-            tap(caretaker_id, 750, 750)
-        time.sleep(3)
-        caretaker_home.close_drawer()
-        time.sleep(2)
+        caretaker_home.sign_out()
+        time.sleep(1)
 
 
         # 2. Caretaker logs in again

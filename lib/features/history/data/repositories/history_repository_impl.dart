@@ -43,7 +43,7 @@ class HistoryRepositoryImpl implements HistoryRepository {
       for (final med in medicines) {
         final logs = groupedLogs[med.id] ?? [];
         
-        double adherenceRate = 100.0;
+        double? adherenceRate;
         if (logs.isNotEmpty) {
           final total = logs.length;
           final taken = logs.where((l) => l.status == 'Taken').length;

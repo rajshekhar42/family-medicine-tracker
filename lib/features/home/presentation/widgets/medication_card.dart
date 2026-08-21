@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/date_time_utils.dart';
 import '../../domain/entities/scheduled_dose.dart';
 
@@ -20,10 +18,11 @@ class MedicationCard extends StatelessWidget {
 
   void _showEditStatusBottomSheet(BuildContext context) {
     final isTaken = dose.status == 'Taken';
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
 
     showModalBottomSheet(
       context: context,
-      backgroundColor: AppColors.background,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
@@ -40,7 +39,7 @@ class MedicationCard extends StatelessWidget {
                   height: 4,
                   margin: const EdgeInsets.only(bottom: 20),
                   decoration: BoxDecoration(
-                    color: AppColors.cardFill,
+                    color: colorScheme.onSurface.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -48,18 +47,17 @@ class MedicationCard extends StatelessWidget {
               Text(
                 'Update Log Status',
                 textAlign: TextAlign.center,
-                style: AppTextStyles.titleLarge.copyWith(
+                style: textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
                   fontSize: 20,
-                  color: AppColors.textPrimary,
                 ),
               ),
               const SizedBox(height: 12),
               Text(
                 'Do you want to update the status of "${dose.medicineName}"?',
                 textAlign: TextAlign.center,
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colorScheme.onSurface.withOpacity(0.6),
                 ),
               ),
               const SizedBox(height: 24),
@@ -69,11 +67,11 @@ class MedicationCard extends StatelessWidget {
                     Navigator.pop(context);
                     onSkip();
                   },
-                  icon: const Icon(Icons.cancel, color: AppColors.white),
+                  icon: Icon(Icons.cancel, color: colorScheme.onError),
                   label: const Text('Mark as Skipped'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.red,
-                    foregroundColor: AppColors.white,
+                    backgroundColor: colorScheme.error,
+                    foregroundColor: colorScheme.onError,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -87,11 +85,11 @@ class MedicationCard extends StatelessWidget {
                     Navigator.pop(context);
                     onTake();
                   },
-                  icon: const Icon(Icons.check_circle, color: AppColors.white),
+                  icon: const Icon(Icons.check_circle, color: Colors.white),
                   label: const Text('Mark as Taken'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.green,
-                    foregroundColor: AppColors.white,
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
@@ -103,7 +101,7 @@ class MedicationCard extends StatelessWidget {
               TextButton(
                 onPressed: () => Navigator.pop(context),
                 style: TextButton.styleFrom(
-                  foregroundColor: AppColors.accent,
+                  foregroundColor: colorScheme.secondary,
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
                 child: const Text('Cancel'),
@@ -140,6 +138,15 @@ class MedicationCard extends StatelessWidget {
     final isTaken = dose.status == 'Taken';
     final isSkipped = dose.status == 'Skipped';
 
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Use theme-aware green/red
+    final greenColor = isDark ? const Color(0xFF66BB6A) : const Color(0xFF81C784);
+    final redColor = isDark ? const Color(0xFFEF5350) : const Color(0xFFE57373);
+    final cardBg = isDark ? colorScheme.surface : Colors.white;
+
     final dosageStr = dose.dosage.trim();
     final quantityStr = dose.quantity.trim();
     final freqStr = _getDisplayFrequency(dose.frequency);
@@ -153,24 +160,24 @@ class MedicationCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
         color: isTaken
-            ? AppColors.green.withOpacity(0.08)
+            ? greenColor.withOpacity(0.08)
             : isSkipped
-            ? AppColors.red.withOpacity(0.08)
-            : AppColors.white,
+            ? redColor.withOpacity(0.08)
+            : cardBg,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: isTaken
-              ? AppColors.green.withOpacity(0.3)
+              ? greenColor.withOpacity(0.3)
               : isSkipped
-              ? AppColors.red.withOpacity(0.3)
-              : AppColors.cardFill.withOpacity(0.4),
+              ? redColor.withOpacity(0.3)
+              : colorScheme.onSurface.withOpacity(0.08),
           width: 1.5,
         ),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: AppColors.shadow,
+            color: Colors.black.withOpacity(isDark ? 0.2 : 0.04),
             blurRadius: 8,
-            offset: Offset(0, 2),
+            offset: const Offset(0, 2),
           ),
         ],
       ),
@@ -178,19 +185,19 @@ class MedicationCard extends StatelessWidget {
         children: [
           // Left Action: Skip Button (Only visible if not logged yet and not read-only)
           if (!hasLogged && !isReadOnly)
-            SkipButton(onPressed: onSkip)
+            SkipButton(onPressed: onSkip, circleColor: redColor, textColor: colorScheme.onSurface)
           else if (hasLogged)
             // Indicator status icon
             Icon(
               isTaken ? Icons.check_circle : Icons.cancel,
-              color: isTaken ? AppColors.green : AppColors.red,
+              color: isTaken ? greenColor : redColor,
               size: 28,
             )
           else
             // Read-only and not logged yet: show a neutral pending icon
             Icon(
               Icons.radio_button_unchecked_rounded,
-              color: AppColors.textSecondary.withValues(alpha: 0.4),
+              color: colorScheme.onSurface.withValues(alpha: 0.4),
               size: 28,
             ),
 
@@ -203,10 +210,10 @@ class MedicationCard extends StatelessWidget {
               children: [
                 Text(
                   dose.medicineName,
-                  style: AppTextStyles.labelLarge.copyWith(
+                  style: textTheme.labelLarge?.copyWith(
                     color: hasLogged
-                        ? AppColors.textSecondary
-                        : AppColors.textPrimary,
+                        ? colorScheme.onSurface.withOpacity(0.5)
+                        : colorScheme.onSurface,
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
                   ),
@@ -218,17 +225,17 @@ class MedicationCard extends StatelessWidget {
                       _getMedicineIcon(dose.medicineType),
                       size: 14,
                       color: isTaken
-                          ? AppColors.green
+                          ? greenColor
                           : isSkipped
-                          ? AppColors.red
-                          : AppColors.accent,
+                          ? redColor
+                          : colorScheme.secondary,
                     ),
                     const SizedBox(width: 6),
                     Expanded(
                       child: Text(
                         detailsText,
-                        style: AppTextStyles.bodySmall.copyWith(
-                          color: AppColors.textSecondary,
+                        style: textTheme.bodySmall?.copyWith(
+                          color: colorScheme.onSurface.withOpacity(0.5),
                         ),
                       ),
                     ),
@@ -240,21 +247,21 @@ class MedicationCard extends StatelessWidget {
 
           // Right Action: Take Button (Only visible if not logged yet and not read-only)
           if (!hasLogged && !isReadOnly)
-            TakeButton(onPressed: onTake)
+            TakeButton(onPressed: onTake, circleColor: greenColor, textColor: colorScheme.onSurface)
           else if (isTaken && dose.takenAt != null)
             Text(
               'Taken at\n${DateTimeUtils.formatTime(dose.takenAt!)}',
               textAlign: TextAlign.right,
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.green,
+              style: textTheme.bodySmall?.copyWith(
+                color: greenColor,
                 fontWeight: FontWeight.w500,
               ),
             )
           else if (isSkipped)
             Text(
               'Skipped',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.red,
+              style: textTheme.bodySmall?.copyWith(
+                color: redColor,
                 fontWeight: FontWeight.w500,
               ),
             ),
@@ -278,21 +285,21 @@ class MedicationCard extends StatelessWidget {
         },
         background: Container(
           decoration: BoxDecoration(
-            color: AppColors.green.withOpacity(0.2),
+            color: greenColor.withOpacity(0.2),
             borderRadius: BorderRadius.circular(20),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 20),
           alignment: Alignment.centerLeft,
-          child: const Icon(Icons.check, color: AppColors.green, size: 30),
+          child: Icon(Icons.check, color: greenColor, size: 30),
         ),
         secondaryBackground: Container(
           decoration: BoxDecoration(
-            color: AppColors.red.withOpacity(0.2),
+            color: redColor.withOpacity(0.2),
             borderRadius: BorderRadius.circular(20),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 20),
           alignment: Alignment.centerRight,
-          child: const Icon(Icons.close, color: AppColors.red, size: 30),
+          child: Icon(Icons.close, color: redColor, size: 30),
         ),
         child: cardContent,
       );
@@ -327,10 +334,14 @@ class MedicationCard extends StatelessWidget {
 class SkipButton extends StatelessWidget {
   final VoidCallback onPressed;
   final double size;
+  final Color circleColor;
+  final Color textColor;
 
   const SkipButton({
     super.key,
     required this.onPressed,
+    required this.circleColor,
+    required this.textColor,
     this.size = 44,
   });
 
@@ -347,8 +358,8 @@ class SkipButton extends StatelessWidget {
         child: CustomPaint(
           painter: CircleActionPainter(
             label: 'SKIP',
-            circleColor: AppColors.red,
-            textColor: AppColors.textPrimary,
+            circleColor: circleColor,
+            textColor: textColor,
           ),
         ),
       ),
@@ -359,10 +370,14 @@ class SkipButton extends StatelessWidget {
 class TakeButton extends StatelessWidget {
   final VoidCallback onPressed;
   final double size;
+  final Color circleColor;
+  final Color textColor;
 
   const TakeButton({
     super.key,
     required this.onPressed,
+    required this.circleColor,
+    required this.textColor,
     this.size = 44,
   });
 
@@ -379,8 +394,8 @@ class TakeButton extends StatelessWidget {
         child: CustomPaint(
           painter: CircleActionPainter(
             label: 'TAKE',
-            circleColor: AppColors.green,
-            textColor: AppColors.textPrimary,
+            circleColor: circleColor,
+            textColor: textColor,
           ),
         ),
       ),

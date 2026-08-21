@@ -139,11 +139,22 @@ def is_keyboard_visible(device_id):
     out, _ = run_adb(device_id, ["shell", "dumpsys input_method | grep mInputShown"])
     return "mInputShown=true" in out
 
+def is_app_in_foreground(device_id, package="org.medimitra.family_medicine_tracker"):
+    out, _ = run_adb(device_id, ["shell", "dumpsys window | grep mCurrentFocus"])
+    return package in out
+
+def ensure_app_in_foreground(device_id, package="org.medimitra.family_medicine_tracker", activity=".MainActivity"):
+    if not is_app_in_foreground(device_id, package):
+        print(f"[{device_id}] ⚠️ App was backgrounded. Bringing to foreground...")
+        run_adb(device_id, ["shell", "am", "start", "-n", f"{package}/{activity}"])
+        time.sleep(1.5)
+
 def hide_keyboard(device_id):
     if is_keyboard_visible(device_id):
-        print(f"[{device_id}] Keyboard is visible. Dismissing keyboard via KEYCODE_ESCAPE...")
-        run_adb(device_id, ["shell", "input", "keyevent", "111"])
-        time.sleep(1.5)
+        print(f"[{device_id}] Keyboard is visible. Dismissing keyboard via KEYCODE_BACK...")
+        run_adb(device_id, ["shell", "input", "keyevent", "4"])
+        time.sleep(1.0)
+        ensure_app_in_foreground(device_id)
     else:
         print(f"[{device_id}] Keyboard is not visible. Skipping dismissal.")
 

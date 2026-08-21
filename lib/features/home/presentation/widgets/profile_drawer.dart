@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/constants/app_constants.dart';
 import '../../../profiles/presentation/providers/active_profile_provider.dart';
 import '../../../onboarding/presentation/providers/onboarding_provider.dart';
@@ -14,10 +12,10 @@ import '../../../sync/presentation/providers/sync_provider.dart';
 import 'dialogs/go_premium_dialog.dart';
 import 'dialogs/add_family_member_dialog.dart';
 import 'dialogs/edit_profile_dialog.dart';
-import 'dialogs/delete_profile_dialog.dart';
+import 'dialogs/logout_dialog.dart';
 
 class ProfileDrawer extends ConsumerWidget {
-  const ProfileDrawer({super.key});
+  ProfileDrawer({super.key});
 
   void _showGoPremiumDialog(BuildContext context) =>
       showGoPremiumDialog(context);
@@ -38,30 +36,26 @@ class ProfileDrawer extends ConsumerWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: AppColors.textPrimary.withOpacity(0.92),
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.92),
               borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.25),
                   blurRadius: 10,
-                  offset: const Offset(0, 4),
+                  offset: Offset(0, 4),
                 ),
               ],
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(
-                  Icons.info_outline,
-                  color: AppColors.white,
-                  size: 20,
-                ),
-                const SizedBox(width: 12),
+                Icon(Icons.info_outline, color: Colors.white, size: 20),
+                SizedBox(width: 12),
                 Expanded(
                   child: Text(
                     'You can trigger sync again after $seconds seconds',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.white,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.white,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
@@ -74,7 +68,7 @@ class ProfileDrawer extends ConsumerWidget {
     );
 
     overlay.insert(entry);
-    Future.delayed(const Duration(seconds: 2), () {
+    Future.delayed(Duration(seconds: 2), () {
       if (entry.mounted) {
         entry.remove();
       }
@@ -89,13 +83,17 @@ class ProfileDrawer extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final greenColor = isDark ? Color(0xFF66BB6A) : Color(0xFF81C784);
     final activeProfile = ref.watch(activeProfileProvider);
     final profilesState = ref.watch(profilesListProvider);
     final authState = ref.watch(authProvider);
     final syncState = ref.watch(syncStateProvider);
 
     return Drawer(
-      backgroundColor: AppColors.background,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       child: SafeArea(
         child: Column(
           children: [
@@ -103,7 +101,7 @@ class ProfileDrawer extends ConsumerWidget {
             Container(
               padding: const EdgeInsets.all(24.0),
               width: double.infinity,
-              color: AppColors.cardFill.withOpacity(0.2),
+              color: colorScheme.surface.withOpacity(0.2),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -115,13 +113,15 @@ class ProfileDrawer extends ConsumerWidget {
                         },
                         child: CircleAvatar(
                           radius: 30,
-                          backgroundColor: AppColors.accent.withOpacity(0.2),
+                          backgroundColor: colorScheme.secondary.withOpacity(
+                            0.2,
+                          ),
                           child: Text(
                             (activeProfile?.profileName.isNotEmpty ?? false)
                                 ? activeProfile!.profileName[0].toUpperCase()
                                 : '?',
-                            style: AppTextStyles.titleMedium.copyWith(
-                              color: AppColors.accent,
+                            style: textTheme.titleMedium?.copyWith(
+                              color: colorScheme.secondary,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
@@ -135,7 +135,7 @@ class ProfileDrawer extends ConsumerWidget {
                           children: [
                             Text(
                               activeProfile?.profileName ?? 'User Profile',
-                              style: AppTextStyles.titleSmall.copyWith(
+                              style: textTheme.titleSmall?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -148,14 +148,14 @@ class ProfileDrawer extends ConsumerWidget {
                                   vertical: 2,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: AppColors.red.withOpacity(0.1),
+                                  color: colorScheme.error.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
-                                child: const Text(
+                                child: Text(
                                   'Read-only Profile',
                                   style: TextStyle(
                                     fontSize: 10,
-                                    color: AppColors.red,
+                                    color: colorScheme.error,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -191,15 +191,12 @@ class ProfileDrawer extends ConsumerWidget {
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text(
-                              'PROFILES',
-                              style: AppTextStyles.titleSmall,
-                            ),
+                            Text('PROFILES', style: textTheme.titleSmall),
                             if (isCaretaker)
                               IconButton(
-                                icon: const Icon(
+                                icon: Icon(
                                   Icons.add_circle_outline,
-                                  color: AppColors.accent,
+                                  color: colorScheme.secondary,
                                 ),
                                 onPressed: () {
                                   final familyCount = profiles
@@ -236,7 +233,8 @@ class ProfileDrawer extends ConsumerWidget {
                           connectionStatus = conn['status'] as String?;
                         }
 
-                        final isCaretakerItem = profile.profileType == 'Caretaker';
+                        final isCaretakerItem =
+                            profile.profileType == 'Caretaker';
 
                         if (isCaretakerItem) {
                           return Container(
@@ -246,25 +244,28 @@ class ProfileDrawer extends ConsumerWidget {
                             ),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? AppColors.cardFill
-                                  : AppColors.transparent,
+                                  ? colorScheme.surface
+                                  : Colors.transparent,
                               borderRadius: BorderRadius.circular(10),
                               border: isSelected
                                   ? Border.all(
-                                      color: AppColors.accent.withOpacity(0.3),
+                                      color: colorScheme.secondary.withOpacity(
+                                        0.3,
+                                      ),
                                       width: 1.5,
                                     )
                                   : null,
                               boxShadow: isSelected
                                   ? [
                                       BoxShadow(
-                                        color: AppColors.accent.withOpacity(0.35),
+                                        color: colorScheme.secondary
+                                            .withOpacity(0.35),
                                         offset: const Offset(0, 2),
                                         blurRadius: 6,
                                         spreadRadius: 0,
                                       ),
                                       BoxShadow(
-                                        color: AppColors.white.withOpacity(0.6),
+                                        color: Colors.white.withOpacity(0.6),
                                         offset: const Offset(0, -1),
                                         blurRadius: 2,
                                         spreadRadius: 0,
@@ -290,14 +291,14 @@ class ProfileDrawer extends ConsumerWidget {
                                     CircleAvatar(
                                       radius: 13,
                                       backgroundColor: isSelected
-                                          ? AppColors.accent
-                                          : AppColors.cardFill,
+                                          ? colorScheme.secondary
+                                          : colorScheme.surface,
                                       child: Text(
                                         profile.profileName[0].toUpperCase(),
                                         style: TextStyle(
                                           color: isSelected
-                                              ? AppColors.white
-                                              : AppColors.textPrimary,
+                                              ? Colors.white
+                                              : colorScheme.onSurface,
                                           fontSize: 12,
                                           fontWeight: FontWeight.bold,
                                         ),
@@ -307,7 +308,7 @@ class ProfileDrawer extends ConsumerWidget {
                                     Expanded(
                                       child: Text(
                                         profile.profileName,
-                                        style: AppTextStyles.labelLarge.copyWith(
+                                        style: textTheme.labelLarge?.copyWith(
                                           fontWeight: isSelected
                                               ? FontWeight.bold
                                               : FontWeight.normal,
@@ -322,12 +323,13 @@ class ProfileDrawer extends ConsumerWidget {
                                         profile,
                                       ),
                                       borderRadius: BorderRadius.circular(12),
-                                      child: const Padding(
+                                      child: Padding(
                                         padding: EdgeInsets.all(4.0),
                                         child: Icon(
                                           Icons.edit,
                                           size: 16,
-                                          color: AppColors.textSecondary,
+                                          color: colorScheme.onSurface
+                                              .withOpacity(0.5),
                                         ),
                                       ),
                                     ),
@@ -345,25 +347,29 @@ class ProfileDrawer extends ConsumerWidget {
                           ),
                           decoration: BoxDecoration(
                             color: isSelected
-                                ? AppColors.cardFill
-                                : AppColors.transparent,
+                                ? colorScheme.surface
+                                : Colors.transparent,
                             borderRadius: BorderRadius.circular(10),
                             border: isSelected
                                 ? Border.all(
-                                    color: AppColors.accent.withOpacity(0.3),
+                                    color: colorScheme.secondary.withOpacity(
+                                      0.3,
+                                    ),
                                     width: 1.5,
                                   )
                                 : null,
                             boxShadow: isSelected
                                 ? [
                                     BoxShadow(
-                                      color: AppColors.accent.withOpacity(0.35),
+                                      color: colorScheme.secondary.withOpacity(
+                                        0.35,
+                                      ),
                                       offset: const Offset(0, 2),
                                       blurRadius: 6,
                                       spreadRadius: 0,
                                     ),
                                     BoxShadow(
-                                      color: AppColors.white.withOpacity(0.6),
+                                      color: Colors.white.withOpacity(0.6),
                                       offset: const Offset(0, -1),
                                       blurRadius: 2,
                                       spreadRadius: 0,
@@ -393,14 +399,14 @@ class ProfileDrawer extends ConsumerWidget {
                                       CircleAvatar(
                                         radius: 13,
                                         backgroundColor: isSelected
-                                            ? AppColors.accent
-                                            : AppColors.cardFill,
+                                            ? colorScheme.secondary
+                                            : colorScheme.surface,
                                         child: Text(
                                           profile.profileName[0].toUpperCase(),
                                           style: TextStyle(
                                             color: isSelected
-                                                ? AppColors.white
-                                                : AppColors.textPrimary,
+                                                ? Colors.white
+                                                : colorScheme.onSurface,
                                             fontSize: 12,
                                             fontWeight: FontWeight.bold,
                                           ),
@@ -410,7 +416,7 @@ class ProfileDrawer extends ConsumerWidget {
                                       Expanded(
                                         child: Text(
                                           profile.profileName,
-                                          style: AppTextStyles.labelLarge.copyWith(
+                                          style: textTheme.labelLarge?.copyWith(
                                             fontWeight: isSelected
                                                 ? FontWeight.bold
                                                 : FontWeight.normal,
@@ -425,23 +431,30 @@ class ProfileDrawer extends ConsumerWidget {
                                   Row(
                                     children: [
                                       Expanded(
-                                        child: (profile.profileType == 'Caretaker')
+                                        child:
+                                            (profile.profileType == 'Caretaker')
                                             ? const SizedBox.shrink()
                                             : Text(
                                                 (!profile.isOwner &&
-                                                        connectionStatus == 'pending')
+                                                        connectionStatus ==
+                                                            'pending')
                                                     ? 'Pending Approval'
                                                     : (profile.lastSync != null
-                                                        ? 'Synced: ${_formatLastSyncTime(profile.lastSync!)}'
-                                                        : 'Synced: Never'),
+                                                          ? 'Synced: ${_formatLastSyncTime(profile.lastSync!)}'
+                                                          : 'Synced: Never'),
                                                 style: TextStyle(
                                                   fontSize: 11,
-                                                  color: (!profile.isOwner &&
-                                                          connectionStatus == 'pending')
-                                                      ? AppColors.red
-                                                      : AppColors.textSecondary,
-                                                  fontWeight: (!profile.isOwner &&
-                                                          connectionStatus == 'pending')
+                                                  color:
+                                                      (!profile.isOwner &&
+                                                          connectionStatus ==
+                                                              'pending')
+                                                      ? colorScheme.error
+                                                      : colorScheme.onSurface
+                                                            .withOpacity(0.5),
+                                                  fontWeight:
+                                                      (!profile.isOwner &&
+                                                          connectionStatus ==
+                                                              'pending')
                                                       ? FontWeight.bold
                                                       : FontWeight.normal,
                                                 ),
@@ -450,20 +463,25 @@ class ProfileDrawer extends ConsumerWidget {
                                       if (!profile.isOwner &&
                                           connectionStatus != 'pending')
                                         Container(
-                                          margin: const EdgeInsets.only(right: 8),
+                                          margin: const EdgeInsets.only(
+                                            right: 8,
+                                          ),
                                           padding: const EdgeInsets.symmetric(
                                             horizontal: 6,
                                             vertical: 2,
                                           ),
                                           decoration: BoxDecoration(
-                                            color: AppColors.cardFill,
-                                            borderRadius: BorderRadius.circular(4),
+                                            color: colorScheme.surface,
+                                            borderRadius: BorderRadius.circular(
+                                              4,
+                                            ),
                                           ),
-                                          child: const Text(
+                                          child: Text(
                                             'Family',
                                             style: TextStyle(
                                               fontSize: 10,
-                                              color: AppColors.textSecondary,
+                                              color: colorScheme.onSurface
+                                                  .withOpacity(0.5),
                                               fontWeight: FontWeight.normal,
                                             ),
                                           ),
@@ -475,12 +493,13 @@ class ProfileDrawer extends ConsumerWidget {
                                           profile,
                                         ),
                                         borderRadius: BorderRadius.circular(12),
-                                        child: const Padding(
+                                        child: Padding(
                                           padding: EdgeInsets.all(4.0),
                                           child: Icon(
                                             Icons.edit,
                                             size: 16,
-                                            color: AppColors.textSecondary,
+                                            color: colorScheme.onSurface
+                                                .withOpacity(0.5),
                                           ),
                                         ),
                                       ),
@@ -492,6 +511,94 @@ class ProfileDrawer extends ConsumerWidget {
                           ),
                         );
                       }),
+                      if (!isCaretaker)
+                        Builder(
+                          builder: (context) {
+                            final activeConns =
+                                ref
+                                    .watch(parentActiveConnectionsProvider)
+                                    .valueOrNull ??
+                                [];
+                            if (activeConns.isEmpty) {
+                              return const SizedBox.shrink();
+                            }
+
+                            final isDark =
+                                Theme.of(context).brightness ==
+                                Brightness.dark;
+                            final greenColor =
+                                isDark
+                                    ? const Color(0xFF66BB6A)
+                                    : const Color(0xFF81C784);
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children:
+                                  activeConns.map((conn) {
+                                    final caretakerName =
+                                        conn['display_name'] as String? ??
+                                        'Caretaker';
+                                    final caretakerAppCode =
+                                        conn['caretaker_app_code']
+                                            as String? ??
+                                        '';
+                                    final text =
+                                        caretakerAppCode.isNotEmpty
+                                            ? '$caretakerName ($caretakerAppCode) is tracking your medicine doses, please consume and log on time.'
+                                            : '$caretakerName is tracking your medicine doses, please consume and log on time.';
+
+                                    return Container(
+                                      margin: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 6,
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 8,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: greenColor.withValues(
+                                          alpha: 0.12,
+                                        ),
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                          color: greenColor.withValues(
+                                            alpha: 0.3,
+                                          ),
+                                        ),
+                                      ),
+                                      child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Icon(
+                                            Icons.verified_user_outlined,
+                                            size: 14,
+                                            color: greenColor,
+                                          ),
+                                          const SizedBox(width: 6),
+                                          Expanded(
+                                            child: Text(
+                                              text,
+                                              style: textTheme.bodySmall
+                                                  ?.copyWith(
+                                                    fontSize: 11,
+                                                    color: colorScheme
+                                                        .onSurface
+                                                        .withValues(alpha: 0.9),
+                                                    height: 1.3,
+                                                    fontWeight:
+                                                        FontWeight.w500,
+                                                  ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    );
+                                  }).toList(),
+                            );
+                          },
+                        ),
                     ],
                   );
                 },
@@ -516,15 +623,12 @@ class ProfileDrawer extends ConsumerWidget {
                   ListTile(
                     dense: true,
                     visualDensity: VisualDensity.compact,
-                    leading: const Icon(
+                    leading: Icon(
                       Icons.medication_outlined,
-                      color: AppColors.accent,
+                      color: colorScheme.secondary,
                       size: 20,
                     ),
-                    title: const Text(
-                      'Medicines List',
-                      style: AppTextStyles.labelLarge,
-                    ),
+                    title: Text('Medicines List', style: textTheme.labelLarge),
                     onTap: () {
                       context.pop();
                       context.push(AppConstants.routeMedicinesList);
@@ -533,14 +637,14 @@ class ProfileDrawer extends ConsumerWidget {
                   ListTile(
                     dense: true,
                     visualDensity: VisualDensity.compact,
-                    leading: const Icon(
+                    leading: Icon(
                       Icons.history_outlined,
-                      color: AppColors.accent,
+                      color: colorScheme.secondary,
                       size: 20,
                     ),
-                    title: const Text(
+                    title: Text(
                       'Adherence History',
-                      style: AppTextStyles.labelLarge,
+                      style: textTheme.labelLarge,
                     ),
                     onTap: () {
                       context.pop();
@@ -550,15 +654,12 @@ class ProfileDrawer extends ConsumerWidget {
                   ListTile(
                     dense: true,
                     visualDensity: VisualDensity.compact,
-                    leading: const Icon(
+                    leading: Icon(
                       Icons.settings_outlined,
-                      color: AppColors.accent,
+                      color: colorScheme.secondary,
                       size: 20,
                     ),
-                    title: const Text(
-                      'Settings',
-                      style: AppTextStyles.labelLarge,
-                    ),
+                    title: Text('Settings', style: textTheme.labelLarge),
                     onTap: () {
                       context.pop();
                       context.push(AppConstants.routeSettings);
@@ -576,11 +677,11 @@ class ProfileDrawer extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Card(
-                color: AppColors.background,
+                color: Theme.of(context).scaffoldBackgroundColor,
                 elevation: 0,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
-                  side: BorderSide(color: AppColors.cardFill.withOpacity(0.5)),
+                  side: BorderSide(color: colorScheme.surface.withOpacity(0.5)),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.all(12.0),
@@ -590,19 +691,15 @@ class ProfileDrawer extends ConsumerWidget {
                       if (authState.isAuthenticated) ...[
                         Row(
                           children: [
-                            const Icon(
-                              Icons.cloud_done,
-                              color: AppColors.green,
-                              size: 18,
-                            ),
+                            Icon(Icons.cloud_done, color: greenColor, size: 18),
                             const SizedBox(width: 8),
                             Expanded(
                               child: Text(
                                 'Family Sync Active',
-                                style: AppTextStyles.labelLarge.copyWith(
+                                style: textTheme.labelLarge?.copyWith(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 12,
-                                  color: AppColors.green,
+                                  color: greenColor,
                                 ),
                               ),
                             ),
@@ -622,82 +719,156 @@ class ProfileDrawer extends ConsumerWidget {
                                 rawCode == 'None' ||
                                 rawCode.isEmpty;
                             final myCode = isPending ? 'None' : rawCode;
+                            final isParent = owner.profileType == 'Parent';
 
-                            return Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
                                   children: [
-                                    const Text(
-                                      'MY APP CODE',
-                                      style: TextStyle(
-                                        fontSize: 9,
-                                        color: AppColors.textSecondary,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    if (isPending)
-                                      const SizedBox(
-                                        height: 20,
-                                        child: Row(
-                                          children: [
-                                            SizedBox(
-                                              width: 12,
-                                              height: 12,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 2,
-                                                color: AppColors.accent,
-                                              ),
-                                            ),
-                                            SizedBox(width: 6),
-                                            Text(
-                                              'Generating...',
-                                              style: TextStyle(
-                                                fontSize: 11,
-                                                color: AppColors.textSecondary,
-                                                fontWeight: FontWeight.w500,
-                                              ),
-                                            ),
-                                          ],
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'MY APP CODE',
+                                          style: TextStyle(
+                                            fontSize: 9,
+                                            color: colorScheme.onSurface
+                                                .withValues(alpha: 0.5),
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                         ),
-                                      )
-                                    else
-                                      Text(
-                                        myCode,
-                                        style: AppTextStyles.titleMedium
-                                            .copyWith(
-                                              fontWeight: FontWeight.bold,
-                                              letterSpacing: 1.5,
+                                        const SizedBox(height: 2),
+                                        if (isPending)
+                                          SizedBox(
+                                            height: 20,
+                                            child: Row(
+                                              children: [
+                                                SizedBox(
+                                                  width: 12,
+                                                  height: 12,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                        strokeWidth: 2,
+                                                        color: colorScheme
+                                                            .secondary,
+                                                      ),
+                                                ),
+                                                const SizedBox(width: 6),
+                                                Text(
+                                                  'Generating...',
+                                                  style: TextStyle(
+                                                    fontSize: 11,
+                                                    color: colorScheme.onSurface
+                                                        .withValues(alpha: 0.5),
+                                                    fontWeight: FontWeight.w500,
+                                                  ),
+                                                ),
+                                              ],
                                             ),
+                                          )
+                                        else
+                                          Text(
+                                            myCode,
+                                            style: textTheme.titleMedium
+                                                ?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                  letterSpacing: 1.5,
+                                                ),
+                                          ),
+                                      ],
+                                    ),
+                                    IconButton(
+                                      icon: Icon(
+                                        Icons.copy,
+                                        size: 16,
+                                        color: colorScheme.secondary,
                                       ),
+                                      onPressed: isPending
+                                          ? null
+                                          : () {
+                                              Clipboard.setData(
+                                                ClipboardData(text: myCode),
+                                              );
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
+                                                const SnackBar(
+                                                  content: Text(
+                                                    'App Code copied to clipboard',
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                      tooltip: 'Copy Code',
+                                    ),
                                   ],
                                 ),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.copy,
-                                    size: 16,
-                                    color: AppColors.accent,
-                                  ),
-                                  onPressed: isPending
-                                      ? null
-                                      : () {
-                                          Clipboard.setData(
-                                            ClipboardData(text: myCode),
-                                          );
-                                          ScaffoldMessenger.of(
-                                            context,
-                                          ).showSnackBar(
-                                            const SnackBar(
-                                              content: Text(
-                                                'App Code copied to clipboard',
-                                              ),
+                                if (isParent && !isPending)
+                                  Builder(
+                                    builder: (context) {
+                                      final activeConns =
+                                          ref
+                                              .watch(
+                                                parentActiveConnectionsProvider,
+                                              )
+                                              .valueOrNull ??
+                                          [];
+                                      final isPaired = activeConns.isNotEmpty;
+
+                                      if (!isPaired) {
+                                        return Container(
+                                          margin: const EdgeInsets.only(top: 8),
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 10,
+                                            vertical: 8,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: colorScheme.secondary
+                                                .withValues(alpha: 0.08),
+                                            borderRadius:
+                                                BorderRadius.circular(8),
+                                            border: Border.all(
+                                              color: colorScheme.secondary
+                                                  .withValues(alpha: 0.2),
                                             ),
-                                          );
-                                        },
-                                  tooltip: 'Copy Code',
-                                ),
+                                          ),
+                                          child: Row(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Icon(
+                                                Icons.info_outline_rounded,
+                                                size: 14,
+                                                color: colorScheme.secondary,
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Expanded(
+                                                child: Text(
+                                                  'Share your App Code with your family member. Once they add it in their profile menu, your data will be synced.',
+                                                  style: textTheme.bodySmall
+                                                      ?.copyWith(
+                                                        fontSize: 11,
+                                                        color: colorScheme
+                                                            .onSurface
+                                                            .withValues(
+                                                              alpha: 0.8,
+                                                            ),
+                                                        height: 1.3,
+                                                      ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      }
+
+                                      return const SizedBox.shrink();
+                                    },
+                                  ),
                               ],
                             );
                           },
@@ -708,20 +879,79 @@ class ProfileDrawer extends ConsumerWidget {
                         const SizedBox(height: 10),
                         Builder(
                           builder: (context) {
+                            final colorScheme = Theme.of(context).colorScheme;
+                            final textTheme = Theme.of(context).textTheme;
+                            final isDark =
+                                Theme.of(context).brightness == Brightness.dark;
+                            final greenColor = isDark
+                                ? Color(0xFF66BB6A)
+                                : Color(0xFF81C784);
                             final profiles = profilesState.valueOrNull ?? [];
-                            final currentProfile = profiles.where((p) => p.id == activeProfile?.id).firstOrNull 
-                                ?? activeProfile 
-                                ?? profiles.firstOrNull;
+                            final currentProfile =
+                                profiles
+                                    .where((p) => p.id == activeProfile?.id)
+                                    .firstOrNull ??
+                                activeProfile ??
+                                profiles.firstOrNull;
 
-                            final isCaretaker = currentProfile?.profileType == 'Caretaker';
+                            final isCaretaker =
+                                currentProfile?.profileType == 'Caretaker';
                             if (isCaretaker) {
-                              return const Padding(
-                                padding: EdgeInsets.only(bottom: 10),
+                              final hasParentProfiles = profiles.any(
+                                (p) => !p.isOwner,
+                              );
+                              if (!hasParentProfiles) {
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 10),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: colorScheme.secondary.withValues(
+                                      alpha: 0.08,
+                                    ),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: colorScheme.secondary.withValues(
+                                        alpha: 0.2,
+                                      ),
+                                    ),
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Icon(
+                                        Icons.info_outline_rounded,
+                                        size: 14,
+                                        color: colorScheme.secondary,
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          "Add your parent's profile first to sync and track their medicines",
+                                          style: textTheme.bodySmall?.copyWith(
+                                            fontSize: 11,
+                                            color: colorScheme.onSurface
+                                                .withValues(alpha: 0.8),
+                                            height: 1.3,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 10),
                                 child: Text(
                                   'Caretaker Profile (Family Manager)',
                                   style: TextStyle(
                                     fontSize: 10,
-                                    color: AppColors.textSecondary,
+                                    color: colorScheme.onSurface.withValues(
+                                      alpha: 0.5,
+                                    ),
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
@@ -740,9 +970,11 @@ class ProfileDrawer extends ConsumerWidget {
                                 padding: const EdgeInsets.only(bottom: 10),
                                 child: Text(
                                   lastSyncText,
-                                  style: AppTextStyles.bodySmall.copyWith(
+                                  style: textTheme.bodySmall?.copyWith(
                                     fontSize: 10,
-                                    color: AppColors.textSecondary,
+                                    color: colorScheme.onSurface.withOpacity(
+                                      0.5,
+                                    ),
                                   ),
                                 ),
                               );
@@ -758,8 +990,8 @@ class ProfileDrawer extends ConsumerWidget {
                                 ? '(out of sync)'
                                 : '(fully synced)';
                             final Color syncStatusColor = isDirty
-                                ? AppColors.red
-                                : AppColors.green;
+                                ? colorScheme.error
+                                : greenColor;
 
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 10),
@@ -768,14 +1000,15 @@ class ProfileDrawer extends ConsumerWidget {
                                   children: [
                                     TextSpan(
                                       text: '$lastSyncText ',
-                                      style: AppTextStyles.bodySmall.copyWith(
+                                      style: textTheme.bodySmall?.copyWith(
                                         fontSize: 10,
-                                        color: AppColors.textSecondary,
+                                        color: colorScheme.onSurface
+                                            .withOpacity(0.5),
                                       ),
                                     ),
                                     TextSpan(
                                       text: syncStatusText,
-                                      style: AppTextStyles.bodySmall.copyWith(
+                                      style: textTheme.bodySmall?.copyWith(
                                         fontSize: 10,
                                         color: syncStatusColor,
                                         fontWeight: FontWeight.w600,
@@ -822,12 +1055,12 @@ class ProfileDrawer extends ConsumerWidget {
                                         }
                                       },
                                 icon: syncState.isSyncing
-                                    ? const SizedBox(
+                                    ? SizedBox(
                                         width: 12,
                                         height: 12,
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
-                                          color: AppColors.accent,
+                                          color: colorScheme.secondary,
                                         ),
                                       )
                                     : const Icon(Icons.sync, size: 14),
@@ -842,13 +1075,13 @@ class ProfileDrawer extends ConsumerWidget {
                             const SizedBox(width: 8),
                             IconButton(
                               visualDensity: VisualDensity.compact,
-                              icon: const Icon(
+                              icon: Icon(
                                 Icons.logout,
                                 size: 16,
-                                color: AppColors.red,
+                                color: colorScheme.error,
                               ),
                               onPressed: () =>
-                                  ref.read(authProvider.notifier).signOut(),
+                                  showLogoutConfirmationDialog(context, ref),
                               tooltip: 'Sign Out',
                             ),
                           ],
@@ -857,20 +1090,22 @@ class ProfileDrawer extends ConsumerWidget {
                           const SizedBox(height: 6),
                           Text(
                             syncState.errorMessage!,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 10,
-                              color: AppColors.red,
+                              color: colorScheme.error,
                             ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ],
                       ] else ...[
-                        const Row(
+                        Row(
                           children: [
                             Icon(
                               Icons.cloud_off,
-                              color: AppColors.textSecondary,
+                              color: colorScheme.onSurface.withValues(
+                                alpha: 0.5,
+                              ),
                               size: 18,
                             ),
                             const SizedBox(width: 8),
@@ -879,26 +1114,79 @@ class ProfileDrawer extends ConsumerWidget {
                               style: TextStyle(
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.textSecondary,
+                                color: colorScheme.onSurface.withValues(
+                                  alpha: 0.5,
+                                ),
                               ),
                             ),
                           ],
                         ),
                         const SizedBox(height: 8),
-                        const Text(
-                          'Sign in to synchronize data with caretakers and restore backups.',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: AppColors.textSecondary,
-                          ),
+                        Builder(
+                          builder: (context) {
+                            final profiles = profilesState.valueOrNull ?? [];
+                            final currentProfile =
+                                profiles
+                                    .where((p) => p.id == activeProfile?.id)
+                                    .firstOrNull ??
+                                activeProfile ??
+                                profiles.firstOrNull;
+                            final isCaretaker =
+                                currentProfile?.profileType == 'Caretaker';
+
+                            final guidanceText = isCaretaker
+                                ? "Login and add your parent's profile to sync and track their medicines."
+                                : "Login and share your App Code with your family member. Once they add it in their profile menu, your data will be synced.";
+
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 10),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 8,
+                              ),
+                              decoration: BoxDecoration(
+                                color: colorScheme.secondary.withValues(
+                                  alpha: 0.08,
+                                ),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: colorScheme.secondary.withValues(
+                                    alpha: 0.2,
+                                  ),
+                                ),
+                              ),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Icon(
+                                    Icons.info_outline_rounded,
+                                    size: 14,
+                                    color: colorScheme.secondary,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: Text(
+                                      guidanceText,
+                                      style: textTheme.bodySmall?.copyWith(
+                                        fontSize: 11,
+                                        color: colorScheme.onSurface.withValues(
+                                          alpha: 0.8,
+                                        ),
+                                        height: 1.3,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
                         ),
-                        const SizedBox(height: 10),
                         SizedBox(
                           width: double.infinity,
                           child: ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.accent,
-                              foregroundColor: AppColors.white,
+                              backgroundColor: colorScheme.secondary,
+                              foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 8),
                             ),
                             onPressed: authState.isLoading
@@ -912,7 +1200,7 @@ class ProfileDrawer extends ConsumerWidget {
                                     height: 12,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2,
-                                      color: AppColors.white,
+                                      color: Colors.white,
                                     ),
                                   )
                                 : const Icon(Icons.login, size: 14),
@@ -927,9 +1215,9 @@ class ProfileDrawer extends ConsumerWidget {
                         const SizedBox(height: 6),
                         Text(
                           syncState.errorMessage!,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 10,
-                            color: AppColors.red,
+                            color: colorScheme.error,
                           ),
                         ),
                       ],
@@ -955,18 +1243,18 @@ class ProfileDrawer extends ConsumerWidget {
                         ),
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: AppColors.cardFill.withOpacity(0.3),
+                          color: colorScheme.surface.withOpacity(0.3),
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'CONNECTION REQUESTS',
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
-                                color: AppColors.accent,
+                                color: colorScheme.secondary,
                               ),
                             ),
                             const SizedBox(height: 8),
@@ -984,9 +1272,9 @@ class ProfileDrawer extends ConsumerWidget {
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
                                     IconButton(
-                                      icon: const Icon(
+                                      icon: Icon(
                                         Icons.check,
-                                        color: AppColors.green,
+                                        color: greenColor,
                                         size: 20,
                                       ),
                                       onPressed: () async {
@@ -1000,7 +1288,9 @@ class ProfileDrawer extends ConsumerWidget {
                                         );
 
                                         // 1. Mark all Parent SQLite profile rows as dirty (is_dirty = 1)
-                                        await ref.read(syncRepositoryProvider).markAllRowsDirty(owner.id);
+                                        await ref
+                                            .read(syncRepositoryProvider)
+                                            .markAllRowsDirty(owner.id);
 
                                         // 2. Update connection status to active in RTDB
                                         await ref
@@ -1014,14 +1304,16 @@ class ProfileDrawer extends ConsumerWidget {
                                             );
 
                                         // 3. Trigger immediate push sync to Caretaker
-                                        await ref.read(syncRepositoryProvider).syncAll(owner.id);
+                                        await ref
+                                            .read(syncRepositoryProvider)
+                                            .syncAll(owner.id);
                                       },
                                       tooltip: 'Accept',
                                     ),
                                     IconButton(
-                                      icon: const Icon(
+                                      icon: Icon(
                                         Icons.close,
-                                        color: AppColors.red,
+                                        color: colorScheme.error,
                                         size: 20,
                                       ),
                                       onPressed: () async {

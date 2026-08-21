@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../../core/theme/app_colors.dart';
-import '../../../../../core/theme/app_text_styles.dart';
 
 /// Shows a dialog informing the user they have reached the free plan limit
 /// and prompting them to upgrade to Premium.
@@ -9,21 +7,21 @@ void showGoPremiumDialog(BuildContext context) {
     context: context,
     builder: (context) {
       return AlertDialog(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
-        title: const Row(
+        title: Row(
           children: [
             Icon(Icons.workspace_premium, color: Colors.amber, size: 28),
             SizedBox(width: 10),
             Text(
               'Go Premium',
-              style: AppTextStyles.titleMedium,
+              style: Theme.of(context).textTheme.titleMedium,
             ),
           ],
         ),
-        content: const Column(
+        content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -32,7 +30,7 @@ void showGoPremiumDialog(BuildContext context) {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             SizedBox(height: 10),
@@ -40,7 +38,7 @@ void showGoPremiumDialog(BuildContext context) {
               'Upgrade to Premium to add and manage more Parent profiles for your family.',
               style: TextStyle(
                 fontSize: 12,
-                color: AppColors.textSecondary,
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
               ),
             ),
           ],
@@ -48,9 +46,9 @@ void showGoPremiumDialog(BuildContext context) {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
+            child: Text(
               'Cancel',
-              style: TextStyle(color: AppColors.textSecondary),
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5)),
             ),
           ),
           ElevatedButton(

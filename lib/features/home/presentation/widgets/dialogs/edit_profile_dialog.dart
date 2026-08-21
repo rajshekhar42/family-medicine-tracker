@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../../../core/theme/app_colors.dart';
-import '../../../../../core/theme/app_text_styles.dart';
 import '../../../../onboarding/domain/entities/profile.dart';
 import '../../../../onboarding/presentation/providers/onboarding_provider.dart';
 import '../../../../sync/presentation/providers/sync_provider.dart';
@@ -37,11 +35,13 @@ void showEditProfileDialog(
     builder: (context) {
       return StatefulBuilder(
         builder: (context, setState) {
+          final colorScheme = Theme.of(context).colorScheme;
+          final textTheme = Theme.of(context).textTheme;
           return AlertDialog(
-            backgroundColor: AppColors.background,
-            title: const Text(
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            title: Text(
               'Edit Profile Name',
-              style: AppTextStyles.titleMedium,
+              style: textTheme.titleMedium,
             ),
             content: Column(
               mainAxisSize: MainAxisSize.min,
@@ -50,14 +50,14 @@ void showEditProfileDialog(
                 if (errorMessage != null) ...[
                   Text(
                     errorMessage!,
-                    style: const TextStyle(
-                      color: AppColors.red,
+                    style: TextStyle(
+                      color: colorScheme.error,
                       fontSize: 12,
                     ),
                   ),
-                  const SizedBox(height: 10),
+                  SizedBox(height: 10),
                 ],
-                const Text('Profile Name', style: AppTextStyles.labelLarge),
+                Text('Profile Name', style: textTheme.labelLarge),
                 const SizedBox(height: 8),
                 TextField(
                   controller: nameController,
@@ -66,34 +66,41 @@ void showEditProfileDialog(
                   enableSuggestions: false,
                   keyboardType: TextInputType.visiblePassword,
                   textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(hintText: 'Enter profile name'),
+                  maxLength: 20,
+                  inputFormatters: [
+                    LengthLimitingTextInputFormatter(20),
+                  ],
+                  decoration: const InputDecoration(
+                    hintText: 'Enter profile name',
+                    counterText: '',
+                  ),
                   enabled: !isLoading,
                 ),
                 if (parentAppCode != null && parentAppCode.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   Text(
                     profile.isOwner ? 'App Code' : 'Parent App Code',
-                    style: AppTextStyles.labelLarge,
+                    style: textTheme.labelLarge,
                   ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: appCodeController,
                     readOnly: true,
                     enabled: false,
-                    style: AppTextStyles.bodyMedium.copyWith(
+                    style: textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.2,
-                      color: AppColors.textPrimary,
+                      color: colorScheme.onSurface,
                     ),
                     decoration: InputDecoration(
                       filled: true,
-                      fillColor: AppColors.cardFill.withOpacity(0.3),
+                      fillColor: colorScheme.surface.withOpacity(0.3),
                       disabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: AppColors.cardFill.withOpacity(0.6)),
+                        borderSide: BorderSide(color: colorScheme.surface.withOpacity(0.6)),
                       ),
                       suffixIcon: IconButton(
-                        icon: const Icon(Icons.copy, size: 18, color: AppColors.accent),
+                        icon: Icon(Icons.copy, size: 18, color: colorScheme.secondary),
                         tooltip: 'Copy Code',
                         onPressed: () {
                           Clipboard.setData(ClipboardData(text: parentAppCode!));
@@ -117,9 +124,9 @@ void showEditProfileDialog(
                     children: [
                       TextButton(
                         onPressed: isLoading ? null : () => Navigator.pop(context),
-                        child: const Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+                        child: Text('Cancel', style: TextStyle(color: colorScheme.onSurface.withOpacity(0.5))),
                       ),
-                      const SizedBox(width: 8),
+                      SizedBox(width: 8),
                       ElevatedButton(
                         onPressed: isLoading
                             ? null
@@ -160,35 +167,35 @@ void showEditProfileDialog(
                                 }
                               },
                         child: isLoading
-                            ? const SizedBox(
+                            ? SizedBox(
                                 width: 14,
                                 height: 14,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: AppColors.white,
+                                  color: Colors.white,
                                 ),
                               )
-                            : const Text('Save'),
+                            : Text('Save'),
                       ),
                     ],
                   ),
                   if (!profile.isOwner) ...[
-                    const SizedBox(height: 16),
-                    const Divider(color: AppColors.cardFill),
+                    SizedBox(height: 16),
+                    Divider(color: colorScheme.surface),
                     const SizedBox(height: 12),
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: AppColors.red,
-                          side: const BorderSide(color: AppColors.red, width: 1.2),
+                          foregroundColor: colorScheme.error,
+                          side: BorderSide(color: colorScheme.error, width: 1.2),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
-                        icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.red),
-                        label: const Text(
+                        icon: Icon(Icons.delete_outline, size: 18, color: colorScheme.error),
+                        label: Text(
                           'Delete Profile',
-                          style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.red),
+                          style: TextStyle(fontWeight: FontWeight.bold, color: colorScheme.error),
                         ),
                         onPressed: isLoading
                             ? null

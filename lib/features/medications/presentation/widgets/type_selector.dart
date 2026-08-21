@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
 import '../../domain/entities/med_type_config.dart';
 
 class TypeSelector extends StatelessWidget {
@@ -36,6 +34,8 @@ class TypeSelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     return GridView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -54,10 +54,10 @@ class TypeSelector extends StatelessWidget {
           onTap: () => onTypeSelected(type.id),
           child: Container(
             decoration: BoxDecoration(
-              color: isSelected ? AppColors.accent : AppColors.cardFill.withOpacity(0.5),
+              color: isSelected ? colorScheme.secondary : colorScheme.surface.withOpacity(0.5),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isSelected ? AppColors.accent : AppColors.transparent,
+                color: isSelected ? colorScheme.secondary : Colors.transparent,
                 width: 1.5,
               ),
             ),
@@ -67,15 +67,15 @@ class TypeSelector extends StatelessWidget {
                 Icon(
                   _getIcon(type.id),
                   size: 22,
-                  color: isSelected ? AppColors.white : AppColors.accent,
+                  color: isSelected ? Colors.white : colorScheme.secondary,
                 ),
                 const SizedBox(height: 4),
                 Text(
                   type.displayName,
                   textAlign: TextAlign.center,
-                  style: AppTextStyles.labelSmall.copyWith(
+                  style: textTheme.labelSmall?.copyWith(
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                    color: isSelected ? AppColors.white : AppColors.textPrimary,
+                    color: isSelected ? Colors.white : colorScheme.onSurface,
                     fontSize: 12,
                   ),
                 ),

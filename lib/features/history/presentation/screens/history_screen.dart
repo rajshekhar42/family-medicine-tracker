@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../../../../core/theme/app_colors.dart';
-import '../../../../core/theme/app_text_styles.dart';
 import '../../../../core/utils/date_time_utils.dart';
 import '../providers/history_provider.dart';
 import '../../domain/entities/adherence_report.dart';
@@ -10,52 +8,64 @@ import '../../../home/domain/entities/scheduled_dose.dart';
 import '../../../profiles/presentation/providers/active_profile_provider.dart';
 
 class HistoryScreen extends ConsumerWidget {
-  const HistoryScreen({super.key});
+  HistoryScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final activeProfile = ref.watch(activeProfileProvider);
 
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        backgroundColor: AppColors.background,
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         appBar: AppBar(
-          title: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('Adherence History'),
-              const SizedBox(width: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.cardFill,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  activeProfile?.profileName ?? 'User',
-                  style: AppTextStyles.labelLarge.copyWith(
-                    color: AppColors.accent,
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
+          title: const Text('Adherence History'),
+          backgroundColor: Colors.transparent,
+          centerTitle: false,
+          actions: [
+            if (activeProfile != null)
+              Padding(
+                padding: const EdgeInsets.only(right: 16.0),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 130),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colorScheme.surface,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        activeProfile.profileName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: textTheme.labelLarge?.copyWith(
+                          color: colorScheme.secondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ],
-          ),
-          backgroundColor: AppColors.transparent,
-          centerTitle: true,
-          bottom: const TabBar(
-            indicatorColor: AppColors.accent,
-            labelColor: AppColors.accent,
-            unselectedLabelColor: AppColors.textSecondary,
-            tabs: [
+          ],
+          bottom: TabBar(
+            indicatorColor: colorScheme.secondary,
+            labelColor: colorScheme.secondary,
+            unselectedLabelColor: colorScheme.onSurface.withValues(alpha: 0.5),
+            tabs: const [
               Tab(text: 'By Date'),
               Tab(text: 'By Medicine'),
             ],
           ),
         ),
-        body: const TabBarView(
+        body: TabBarView(
           children: [
             _ByDateTab(),
             _ByMedicineTab(),
@@ -67,21 +77,21 @@ class HistoryScreen extends ConsumerWidget {
 }
 
 class _ByDateTab extends ConsumerWidget {
-  const _ByDateTab();
+  _ByDateTab();
 
   void _selectDate(BuildContext context, WidgetRef ref, DateTime initialDate) async {
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: initialDate,
-      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      firstDate: DateTime.now().subtract(Duration(days: 365)),
+      lastDate: DateTime.now().add(Duration(days: 365)),
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: AppColors.accent,
-              onPrimary: AppColors.white,
-              onSurface: AppColors.textPrimary,
+            colorScheme: ColorScheme.light(
+              primary: Theme.of(context).colorScheme.secondary,
+              onPrimary: Colors.white,
+              onSurface: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           child: child!,
@@ -95,6 +105,8 @@ class _ByDateTab extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final selectedDate = ref.watch(historySelectedDateProvider);
     final dosesFuture = ref.watch(historySelectedDateDosesProvider);
     final dateStr = DateFormat('EEEE, MMM d').format(selectedDate);
@@ -108,10 +120,10 @@ class _ByDateTab extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               IconButton(
-                icon: const Icon(Icons.chevron_left, color: AppColors.accent),
+                icon: Icon(Icons.chevron_left, color: colorScheme.secondary),
                 onPressed: () {
                   ref.read(historySelectedDateProvider.notifier).state =
-                      selectedDate.subtract(const Duration(days: 1));
+                      selectedDate.subtract(Duration(days: 1));
                 },
               ),
               GestureDetector(
@@ -119,27 +131,27 @@ class _ByDateTab extends ConsumerWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
-                    color: AppColors.white,
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: AppColors.cardFill),
+                    border: Border.all(color: colorScheme.surface),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.calendar_today, size: 16, color: AppColors.accent),
-                      const SizedBox(width: 8),
+                      Icon(Icons.calendar_today, size: 16, color: colorScheme.secondary),
+                      SizedBox(width: 8),
                       Text(
                         dateStr,
-                        style: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.bold),
+                        style: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
                       ),
                     ],
                   ),
                 ),
               ),
               IconButton(
-                icon: const Icon(Icons.chevron_right, color: AppColors.accent),
+                icon: Icon(Icons.chevron_right, color: colorScheme.secondary),
                 onPressed: () {
                   ref.read(historySelectedDateProvider.notifier).state =
-                      selectedDate.add(const Duration(days: 1));
+                      selectedDate.add(Duration(days: 1));
                 },
               ),
             ],
@@ -151,10 +163,10 @@ class _ByDateTab extends ConsumerWidget {
           child: dosesFuture.when(
             data: (doses) {
               if (doses.isEmpty) {
-                return const Center(
+                return Center(
                   child: Text(
                     'No medications scheduled for this date.',
-                    style: TextStyle(color: AppColors.textSecondary),
+                    style: TextStyle(color: colorScheme.onSurface.withOpacity(0.5)),
                   ),
                 );
               }
@@ -162,14 +174,14 @@ class _ByDateTab extends ConsumerWidget {
               return ListView.separated(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
                 itemCount: doses.length,
-                separatorBuilder: (context, index) => const SizedBox(height: 12),
+                separatorBuilder: (context, index) => SizedBox(height: 12),
                 itemBuilder: (context, index) {
                   final dose = doses[index];
-                  return _buildDoseTile(dose);
+                  return _buildDoseTile(context, dose);
                 },
               );
             },
-            loading: () => const Center(child: CircularProgressIndicator()),
+            loading: () => Center(child: CircularProgressIndicator()),
             error: (err, stack) => Center(child: Text('Error: $err')),
           ),
         ),
@@ -177,23 +189,23 @@ class _ByDateTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildDoseTile(ScheduledDose dose) {
+  Widget _buildDoseTile(BuildContext context, ScheduledDose dose) {
     final bool hasLogged = dose.status != null;
     final bool isTaken = dose.status == 'Taken';
     final bool isSkipped = dose.status == 'Skipped';
 
-    Color statusColor = AppColors.textSecondary;
+    Color statusColor = Theme.of(context).colorScheme.onSurface.withOpacity(0.5);
     IconData statusIcon = Icons.help_outline;
     String statusText = 'Not logged';
 
     if (isTaken) {
-      statusColor = AppColors.green;
+      statusColor = (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF66BB6A) : const Color(0xFF81C784));
       statusIcon = Icons.check_circle;
       statusText = dose.takenAt != null
           ? 'Taken at ${DateTimeUtils.formatTime(dose.takenAt!)}'
           : 'Taken';
     } else if (isSkipped) {
-      statusColor = AppColors.red;
+      statusColor = Theme.of(context).colorScheme.error;
       statusIcon = Icons.cancel;
       statusText = 'Skipped';
     }
@@ -211,11 +223,11 @@ class _ByDateTab extends ConsumerWidget {
         ),
         title: Text(
           dose.medicineName,
-          style: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.bold),
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
         subtitle: Text(
           'Scheduled at ${dose.scheduledTime} • ${dose.dosage}',
-          style: AppTextStyles.bodySmall,
+          style: Theme.of(context).textTheme.bodySmall,
         ),
         trailing: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -238,7 +250,7 @@ class _ByDateTab extends ConsumerWidget {
 }
 
 class _ByMedicineTab extends ConsumerWidget {
-  const _ByMedicineTab();
+  _ByMedicineTab();
 
   IconData _getIcon(String type) {
     switch (type.toLowerCase()) {
@@ -259,23 +271,27 @@ class _ByMedicineTab extends ConsumerWidget {
     }
   }
 
-  Color _getAdherenceColor(double rate) {
-    if (rate >= 90.0) return AppColors.green;
+  Color _getAdherenceColor(BuildContext context, double rate) {
+    if (rate >= 90.0) return (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF66BB6A) : const Color(0xFF81C784));
     if (rate >= 70.0) return Colors.orange;
-    return AppColors.red;
+    return Theme.of(context).colorScheme.error;
   }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final greenColor = isDark ? const Color(0xFF66BB6A) : const Color(0xFF81C784);
     final reportsState = ref.watch(adherenceReportsProvider);
 
     return reportsState.when(
       data: (reports) {
         if (reports.isEmpty) {
-          return const Center(
+          return Center(
             child: Text(
               'No medications added yet.',
-              style: TextStyle(color: AppColors.textSecondary),
+              style: TextStyle(color: colorScheme.onSurface.withOpacity(0.5)),
             ),
           );
         }
@@ -285,29 +301,34 @@ class _ByMedicineTab extends ConsumerWidget {
           itemCount: reports.length,
           itemBuilder: (context, index) {
             final medAdherence = reports[index];
-            final color = _getAdherenceColor(medAdherence.adherenceRate);
+            final hasLogs = medAdherence.logs.isNotEmpty && medAdherence.adherenceRate != null;
+            final color = hasLogs
+                ? _getAdherenceColor(context, medAdherence.adherenceRate!)
+                : colorScheme.onSurface.withValues(alpha: 0.5);
 
             return Card(
               margin: const EdgeInsets.only(bottom: 12),
               child: ExpansionTile(
-                leading: Icon(_getIcon(medAdherence.type), color: AppColors.accent, size: 28),
+                leading: Icon(_getIcon(medAdherence.type), color: colorScheme.secondary, size: 28),
                 title: Text(
                   medAdherence.medicineName,
-                  style: AppTextStyles.labelLarge.copyWith(fontWeight: FontWeight.bold),
+                  style: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
                 ),
                 subtitle: Text(
                   '${medAdherence.logs.length} logs recorded',
-                  style: AppTextStyles.bodySmall,
+                  style: textTheme.bodySmall,
                 ),
                 trailing: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: color.withOpacity(0.3)),
+                    border: Border.all(color: color.withValues(alpha: 0.3)),
                   ),
                   child: Text(
-                    '${medAdherence.adherenceRate.toStringAsFixed(0)}% Adherence',
+                    hasLogs
+                        ? '${medAdherence.adherenceRate!.toStringAsFixed(0)}% Adherence'
+                        : 'Not logged',
                     style: TextStyle(
                       fontSize: 11,
                       color: color,
@@ -318,11 +339,11 @@ class _ByMedicineTab extends ConsumerWidget {
                 children: [
                   const Divider(height: 1),
                   if (medAdherence.logs.isEmpty)
-                    const Padding(
+                    Padding(
                       padding: EdgeInsets.all(16.0),
                       child: Text(
                         'No logs recorded for this medication yet.',
-                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                        style: TextStyle(fontSize: 12, color: colorScheme.onSurface.withOpacity(0.5)),
                       ),
                     )
                   else
@@ -345,17 +366,17 @@ class _ByMedicineTab extends ConsumerWidget {
                           dense: true,
                           leading: Icon(
                             isTaken ? Icons.check_circle_outline : Icons.cancel_outlined,
-                            color: isTaken ? AppColors.green : AppColors.red,
+                            color: isTaken ? greenColor : colorScheme.error,
                             size: 20,
                           ),
                           title: Text(
                             '$formattedDate at ${log.time}',
-                            style: AppTextStyles.bodyMedium,
+                            style: textTheme.bodyMedium,
                           ),
                           trailing: Text(
                             log.status,
                             style: TextStyle(
-                              color: isTaken ? AppColors.green : AppColors.red,
+                              color: isTaken ? greenColor : colorScheme.error,
                               fontWeight: FontWeight.bold,
                             ),
                           ),

@@ -215,6 +215,36 @@ final pendingConnectionsProvider = StreamProvider<List<Map<String, dynamic>>>((r
   });
 });
 
+final parentActiveConnectionsProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
+  final authState = ref.watch(authProvider);
+  if (!authState.isAuthenticated || authState.firebaseUser == null) {
+    return Stream.value([]);
+  }
+
+  final activeProfile = ref.watch(activeProfileProvider);
+  if (activeProfile == null || !activeProfile.isOwner || activeProfile.appCode == null) {
+    return Stream.value([]);
+  }
+  final remoteDataSource = ref.watch(syncRemoteDataSourceProvider);
+  return remoteDataSource.getActiveConnectionsStream(activeProfile.appCode!).map((event) {
+    if (event.snapshot.exists && event.snapshot.value is Map) {
+      final map = Map<String, dynamic>.from(event.snapshot.value as Map);
+      final List<Map<String, dynamic>> list = [];
+      map.forEach((key, value) {
+        if (value is Map) {
+          final entry = Map<String, dynamic>.from(value);
+          if (entry['status'] == 'active') {
+            entry['caretaker_app_code'] = key;
+            list.add(entry);
+          }
+        }
+      });
+      return list;
+    }
+    return [];
+  });
+});
+
 final caretakerConnectionsProvider = StreamProvider<List<Map<String, dynamic>>>((ref) {
   final authState = ref.watch(authProvider);
   if (!authState.isAuthenticated || authState.firebaseUser == null) {
