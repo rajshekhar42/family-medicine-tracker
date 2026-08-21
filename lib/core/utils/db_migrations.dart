@@ -117,6 +117,22 @@ class DbMigrationV4 implements DbMigration {
   }
 }
 
+/// v4 → v5: Creates `app_preferences` key-value table for device-local UI flags.
+class DbMigrationV5 implements DbMigration {
+  @override
+  int get targetVersion => 5;
+
+  @override
+  Future<void> apply(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ${AppConstants.tableAppPreferences} (
+        key TEXT NOT NULL PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    ''');
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Migration runner — the only place that needs to change when adding a new
 // schema version: append a new DbMigration to the list below.
@@ -135,6 +151,7 @@ class DbMigrationRunner {
     DbMigrationV2(),
     DbMigrationV3(),
     DbMigrationV4(),
+    DbMigrationV5(),
   ];
 
   /// Runs all migrations whose [DbMigration.targetVersion] is in
@@ -148,3 +165,4 @@ class DbMigrationRunner {
     }
   }
 }
+

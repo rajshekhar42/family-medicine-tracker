@@ -130,6 +130,16 @@ class DbHelper {
     ''');
 
     await _createSyncTables(db);
+    await _createAppPreferencesTable(db);
+  }
+
+  Future<void> _createAppPreferencesTable(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ${AppConstants.tableAppPreferences} (
+        key TEXT NOT NULL PRIMARY KEY,
+        value TEXT NOT NULL
+      )
+    ''');
   }
 
   Future<void> _createSyncTables(Database db) async {

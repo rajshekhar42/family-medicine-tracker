@@ -3,7 +3,7 @@ class AppConstants {
 
   // Database
   static const String dbName = 'medicine_tracker.db';
-  static const int dbVersion = 4;
+  static const int dbVersion = 5;
 
   // Tables
   static const String tableProfiles = 'profiles';
@@ -13,6 +13,7 @@ class AppConstants {
   static const String tableSettings = 'settings';
   static const String tableSyncQueue = 'sync_queue';
   static const String tableChunkBuffer = 'chunk_buffer';
+  static const String tableAppPreferences = 'app_preferences';
 
   // Remote Config Keys
   static const String remoteConfigMedTypeUnits = 'medTypeUnits';

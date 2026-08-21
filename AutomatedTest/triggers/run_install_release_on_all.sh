@@ -5,12 +5,12 @@
 set -e
 
 APP_PACKAGE="org.medimitra.family_medicine_tracker"
-APK_PATH="../../build/app/outputs/flutter-apk/app-debug.apk"
+APK_PATH="../../build/app/outputs/flutter-apk/app-release.apk"
 
 echo "============================================================"
-echo "🛠️  1. Compiling latest debug APK..."
+echo "🛠️  1. Compiling latest release APK..."
 echo "============================================================"
-flutter build apk --debug
+flutter build apk --release
 
 # Get all connected device IDs
 DEVICES=$(adb devices | grep -v "List of devices" | grep "device" | awk '{print $1}')

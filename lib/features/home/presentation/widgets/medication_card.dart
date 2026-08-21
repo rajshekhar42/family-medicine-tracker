@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/utils/date_time_utils.dart';
 import '../../domain/entities/scheduled_dose.dart';
+import '../providers/swipe_hint_provider.dart';
+import 'swipe_tutorial_overlay.dart';
 
-class MedicationCard extends StatelessWidget {
+class MedicationCard extends ConsumerStatefulWidget {
   final ScheduledDose dose;
   final VoidCallback onTake;
   final VoidCallback onSkip;
@@ -16,8 +19,48 @@ class MedicationCard extends StatelessWidget {
     this.isReadOnly = false,
   });
 
+  @override
+  ConsumerState<MedicationCard> createState() => _MedicationCardState();
+}
+
+class _MedicationCardState extends ConsumerState<MedicationCard> {
+  bool _showingTutorial = false;
+
+  Future<void> _handleTake() async {
+    final swipeHint = ref.read(swipeHintProvider.notifier);
+
+    // Check if we should show the tutorial BEFORE firing the action,
+    // so the card hasn't transitioned to "logged" state yet.
+    final showHint = await swipeHint.shouldShowHint();
+
+    // Fire the action
+    widget.onTake();
+
+    // Show the tutorial overlay if appropriate
+    if (showHint && mounted) {
+      setState(() => _showingTutorial = true);
+      swipeHint.recordHintShown();
+    }
+  }
+
+  Future<void> _handleSkip() async {
+    final swipeHint = ref.read(swipeHintProvider.notifier);
+
+    // Check if we should show the tutorial BEFORE firing the action
+    final showHint = await swipeHint.shouldShowHint();
+
+    // Fire the action
+    widget.onSkip();
+
+    // Show the tutorial overlay if appropriate
+    if (showHint && mounted) {
+      setState(() => _showingTutorial = true);
+      swipeHint.recordHintShown();
+    }
+  }
+
   void _showEditStatusBottomSheet(BuildContext context) {
-    final isTaken = dose.status == 'Taken';
+    final isTaken = widget.dose.status == 'Taken';
     final colorScheme = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
@@ -54,7 +97,7 @@ class MedicationCard extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                'Do you want to update the status of "${dose.medicineName}"?',
+                'Do you want to update the status of "${widget.dose.medicineName}"?',
                 textAlign: TextAlign.center,
                 style: textTheme.bodyMedium?.copyWith(
                   color: colorScheme.onSurface.withOpacity(0.6),
@@ -65,7 +108,7 @@ class MedicationCard extends StatelessWidget {
                 ElevatedButton.icon(
                   onPressed: () {
                     Navigator.pop(context);
-                    onSkip();
+                    widget.onSkip();
                   },
                   icon: Icon(Icons.cancel, color: colorScheme.onError),
                   label: const Text('Mark as Skipped'),
@@ -83,7 +126,7 @@ class MedicationCard extends StatelessWidget {
                 ElevatedButton.icon(
                   onPressed: () {
                     Navigator.pop(context);
-                    onTake();
+                    widget.onTake();
                   },
                   icon: const Icon(Icons.check_circle, color: Colors.white),
                   label: const Text('Mark as Taken'),
@@ -134,6 +177,7 @@ class MedicationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dose = widget.dose;
     final hasLogged = dose.status != null;
     final isTaken = dose.status == 'Taken';
     final isSkipped = dose.status == 'Skipped';
@@ -184,8 +228,8 @@ class MedicationCard extends StatelessWidget {
       child: Row(
         children: [
           // Left Action: Skip Button (Only visible if not logged yet and not read-only)
-          if (!hasLogged && !isReadOnly)
-            SkipButton(onPressed: onSkip, circleColor: redColor, textColor: colorScheme.onSurface)
+          if (!hasLogged && !widget.isReadOnly)
+            SkipButton(onPressed: _handleSkip, circleColor: redColor, textColor: colorScheme.onSurface)
           else if (hasLogged)
             // Indicator status icon
             Icon(
@@ -246,8 +290,8 @@ class MedicationCard extends StatelessWidget {
           ),
 
           // Right Action: Take Button (Only visible if not logged yet and not read-only)
-          if (!hasLogged && !isReadOnly)
-            TakeButton(onPressed: onTake, circleColor: greenColor, textColor: colorScheme.onSurface)
+          if (!hasLogged && !widget.isReadOnly)
+            TakeButton(onPressed: _handleTake, circleColor: greenColor, textColor: colorScheme.onSurface)
           else if (isTaken && dose.takenAt != null)
             Text(
               'Taken at\n${DateTimeUtils.formatTime(dose.takenAt!)}',
@@ -270,15 +314,15 @@ class MedicationCard extends StatelessWidget {
     );
 
     // Apply swipe actions using Dismissible if not logged yet and not read-only
-    if (!hasLogged && !isReadOnly) {
-      return Dismissible(
+    if (!hasLogged && !widget.isReadOnly) {
+      cardContent = Dismissible(
         key: Key(dose.scheduleId + dose.date),
         confirmDismiss: (direction) async {
           if (direction == DismissDirection.startToEnd) {
-            onTake();
+            await _handleTake();
             return false; // Handled programmatically
           } else if (direction == DismissDirection.endToStart) {
-            onSkip();
+            await _handleSkip();
             return false; // Handled programmatically
           }
           return false;
@@ -306,10 +350,28 @@ class MedicationCard extends StatelessWidget {
     }
 
     // Wrap with double-tap gesture detector to allow editing status if logged and not read-only
-    if (hasLogged && !isReadOnly) {
-      return GestureDetector(
+    if (hasLogged && !widget.isReadOnly) {
+      cardContent = GestureDetector(
         onDoubleTap: () => _showEditStatusBottomSheet(context),
         child: cardContent,
+      );
+    }
+
+    // Wrap in a Stack to overlay the tutorial animation when needed
+    if (_showingTutorial) {
+      return Stack(
+        children: [
+          cardContent,
+          Positioned.fill(
+            child: SwipeTutorialOverlay(
+              onDismissed: () {
+                if (mounted) {
+                  setState(() => _showingTutorial = false);
+                }
+              },
+            ),
+          ),
+        ],
       );
     }
 
